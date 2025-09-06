@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapchat Bid Multiplier Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        input[type="number"] {
+            width: 120px;
+        }
+        
+        .multiplier-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .multiplier-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .multiplier-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .multiplier-item label {
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button.secondary {
+            background: #95a5a6;
+        }
+        
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .output-section {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .code-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #4CAF50;
+            font-size: 12px;
+            padding: 5px 15px;
+        }
+        
+        .copy-btn:hover {
+            background: #45a049;
+        }
+        
+        .tab-container {
+            display: flex;
+            gap: 5px;
+            margin-bottom: -1px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .tab.active {
+            background: #1e1e1e;
+            color: white;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Snapchat Bid Multiplier Generator</h1>
+        
+        <div class="info">
+            <strong>Info:</strong> This tool generates the API calls needed to update bid multipliers on Snapchat Ads. 
+            Enter your campaign details and set multipliers for different targeting dimensions.
+        </div>
+
+        <div class="input-group">
+            <label for="campaignId">Campaign ID</label>
+            <input type="text" id="campaignId" placeholder="Enter Campaign ID">
+        </div>
+
+        <div class="input-group">
+            <label for="adSquadId">Ad Squad ID</label>
+            <input type="text" id="adSquadId" placeholder="Enter Ad Squad ID">
+        </div>
+
+        <div class="input-group">
+            <label for="accessToken">Access Token</label>
+            <input type="text" id="accessToken" placeholder="Enter your Snapchat API Access Token">
+        </div>
+
+        <div class="input-group">
+            <label for="defaultMultiplier">Default Multiplier</label>
+            <input type="number" id="defaultMultiplier" value="1.0" min="0.5" max="10" step="0.1">
+        </div>
+
+        <h2>Gender Multipliers</h2>
+        <div class="multiplier-section">
+            <div class="multiplier-grid">
+                <div class="multiplier-item">
+                    <label for="gender-male">Male</label>
+                    <input type="number" id="gender-male" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="gender-female">Female</label>
+                    <input type="number" id="gender-female" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="gender-unknown">Unknown</label>
+                    <input type="number" id="gender-unknown" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+            </div>
+        </div>
+
+        <h2>Age Range Multipliers</h2>
+        <div class="multiplier-section">
+            <div class="multiplier-grid">
+                <div class="multiplier-item">
+                    <label for="age-13-17">13-17</label>
+                    <input type="number" id="age-13-17" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="age-18-24">18-24</label>
+                    <input type="number" id="age-18-24" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="age-25-34">25-34</label>
+                    <input type="number" id="age-25-34" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="age-35-44">35-44</label>
+                    <input type="number" id="age-35-44" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="age-45-54">45-54</label>
+                    <input type="number" id="age-45-54" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="age-55-64">55-64</label>
+                    <input type="number" id="age-55-64" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+                <div class="multiplier-item">
+                    <label for="age-65+">65+</label>
+                    <input type="number" id="age-65+" min="0.5" max="10" step="0.1" placeholder="1.0">
+                </div>
+            </div>
+        </div>
+
+        <h2>Location Multipliers (Optional)</h2>
+        <div class="multiplier-section">
+            <p>For US States and DMAs, use the format: <code>STATE_CODE:multiplier</code> or <code>DMA_CODE:multiplier</code></p>
+            <p>Example: <code>CA:1.5,NY:1.2,TX:0.8</code> or <code>DMA_501:1.3,DMA_602:0.9</code></p>
+            <div class="input-group">
+                <label for="stateMultipliers">US State Multipliers</label>
+                <input type="text" id="stateMultipliers" placeholder="CA:1.5,NY:1.2,TX:0.8">
+            </div>
+            <div class="input-group">
+                <label for="dmaMultipliers">DMA Multipliers</label>
+                <input type="text" id="dmaMultipliers" placeholder="DMA_501:1.3,DMA_602:0.9">
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="generateCode()">Generate API Code</button>
+            <button class="secondary" onclick="clearAll()">Clear All</button>
+        </div>
+
+        <div class="output-section" id="outputSection">
+            <h2>Generated Code</h2>
+            <div class="tab-container">
+                <div class="tab active" onclick="showTab('curl')">cURL</div>
+                <div class="tab" onclick="showTab('javascript')">JavaScript</div>
+                <div class="tab" onclick="showTab('python')">Python</div>
+                <div class="tab" onclick="showTab('raw')">Raw JSON</div>
+            </div>
+            <div class="code-output" id="curlOutput">
+                <button class="copy-btn" onclick="copyCode('curlOutput')">Copy</button>
+                <pre id="curlCode"></pre>
+            </div>
+            <div class="code-output" id="javascriptOutput" style="display:none;">
+                <button class="copy-btn" onclick="copyCode('javascriptOutput')">Copy</button>
+                <pre id="javascriptCode"></pre>
+            </div>
+            <div class="code-output" id="pythonOutput" style="display:none;">
+                <button class="copy-btn" onclick="copyCode('pythonOutput')">Copy</button>
+                <pre id="pythonCode"></pre>
+            </div>
+            <div class="code-output" id="rawOutput" style="display:none;">
+                <button class="copy-btn" onclick="copyCode('rawOutput')">Copy</button>
+                <pre id="rawCode"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/bid-generator.js"></script>
+</body>
+</html>
