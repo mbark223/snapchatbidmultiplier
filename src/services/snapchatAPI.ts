@@ -17,7 +17,7 @@ export class SnapchatAPIService {
     });
 
     this.client.interceptors.response.use(
-      response => response,
+      (response: any) => response,
       this.handleError
     );
   }
@@ -28,9 +28,9 @@ export class SnapchatAPIService {
       logger.error('Snapchat API Error', { status, data });
       
       throw new APIError(
-        data.error_message || 'Snapchat API Error',
+        (data as any).error_message || 'Snapchat API Error',
         status,
-        data.errors
+        (data as any).errors
       );
     }
     

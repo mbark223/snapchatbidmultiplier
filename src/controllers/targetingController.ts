@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { ValidationService } from '../services/validationService';
 import { APIError } from '../middleware/errorHandler';
-import { DMA, MultiplierConfig } from '../types';
+import { MultiplierConfig } from '../types';
 import { dmaData } from '../data/dmas';
 
 export class TargetingController {
@@ -58,7 +58,7 @@ export class TargetingController {
   };
 
   getStates = async (
-    req: AuthRequest,
+    _req: AuthRequest,
     res: Response,
     next: NextFunction
   ) => {
@@ -124,7 +124,7 @@ export class TargetingController {
   };
 
   getRegions = async (
-    req: AuthRequest,
+    _req: AuthRequest,
     res: Response,
     next: NextFunction
   ) => {

@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { APIError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
 export class AuthController {
-  initiateLogin = async (req: Request, res: Response, next: NextFunction) => {
+  initiateLogin = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const { CLIENT_ID, REDIRECT_URI } = process.env;
       
@@ -27,7 +27,7 @@ export class AuthController {
 
   handleCallback = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { code, state } = req.query;
+      const { code } = req.query;
 
       if (!code) {
         throw new APIError('Authorization code missing', 400);
@@ -37,6 +37,10 @@ export class AuthController {
       const tokens = await this.exchangeCodeForTokens(code as string);
       
       // Create JWT for our app
+      const signOptions: SignOptions = {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+      } as SignOptions;
+      
       const appToken = jwt.sign(
         {
           id: 'user_id', // In production, get actual user ID
@@ -44,7 +48,7 @@ export class AuthController {
           access_token: tokens.access_token
         },
         process.env.JWT_SECRET!,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        signOptions
       );
 
       res.json({
@@ -71,7 +75,7 @@ export class AuthController {
     }
   };
 
-  logout = async (req: Request, res: Response, next: NextFunction) => {
+  logout = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       // In production, invalidate tokens
       res.json({ message: 'Logged out successfully' });
@@ -84,7 +88,7 @@ export class AuthController {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  private async exchangeCodeForTokens(code: string): Promise<any> {
+  private async exchangeCodeForTokens(_code: string): Promise<any> {
     // Implementation to exchange authorization code for access tokens
     // This would make a request to Snapchat's OAuth token endpoint
     logger.info('Exchanging code for tokens');

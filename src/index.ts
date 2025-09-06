@@ -35,7 +35,7 @@ app.use('/api/campaigns', campaignsRouter);
 app.use('/api/adsquads', adsquadsRouter);
 app.use('/api/targeting', targetingRouter);
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
