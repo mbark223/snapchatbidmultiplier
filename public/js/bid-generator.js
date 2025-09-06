@@ -271,20 +271,44 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDropdowns();
 });
 
-function initializeDropdowns() {
-    // Populate states
-    const stateOptionsContainer = document.getElementById('state-options');
-    Object.entries(usStates).forEach(([code, name]) => {
-        const optionDiv = createOptionItem('state', code, `${name} (${code})`);
-        stateOptionsContainer.appendChild(optionDiv);
-    });
+// Also initialize if DOM is already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeDropdowns);
+} else {
+    // DOM is already loaded
+    initializeDropdowns();
+}
 
-    // Populate DMAs
-    const dmaOptionsContainer = document.getElementById('dma-options');
-    dmas.forEach(dma => {
-        const optionDiv = createOptionItem('dma', dma.code, `${dma.name}, ${dma.state}`);
-        dmaOptionsContainer.appendChild(optionDiv);
-    });
+function initializeDropdowns() {
+    try {
+        // Populate states
+        const stateOptionsContainer = document.getElementById('state-options');
+        if (!stateOptionsContainer) {
+            console.error('State options container not found');
+            return;
+        }
+        
+        Object.entries(usStates).forEach(([code, name]) => {
+            const optionDiv = createOptionItem('state', code, `${name} (${code})`);
+            stateOptionsContainer.appendChild(optionDiv);
+        });
+
+        // Populate DMAs
+        const dmaOptionsContainer = document.getElementById('dma-options');
+        if (!dmaOptionsContainer) {
+            console.error('DMA options container not found');
+            return;
+        }
+        
+        dmas.forEach(dma => {
+            const optionDiv = createOptionItem('dma', dma.code, `${dma.name}, ${dma.state}`);
+            dmaOptionsContainer.appendChild(optionDiv);
+        });
+        
+        console.log('Dropdowns initialized successfully');
+    } catch (error) {
+        console.error('Error initializing dropdowns:', error);
+    }
 }
 
 function createOptionItem(type, code, displayName) {
@@ -401,3 +425,16 @@ document.addEventListener('click', function(event) {
         });
     }
 });
+
+// Make functions available globally for onclick handlers
+window.toggleDropdown = toggleDropdown;
+window.toggleSelection = toggleSelection;
+window.updateMultiplier = updateMultiplier;
+window.removeSelection = removeSelection;
+window.filterOptions = filterOptions;
+window.selectAll = selectAll;
+window.deselectAll = deselectAll;
+window.generateCode = generateCode;
+window.clearAll = clearAll;
+window.showTab = showTab;
+window.copyCode = copyCode;
