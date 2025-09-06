@@ -1,12 +1,13 @@
 function generateCode() {
-    const adSquadId = document.getElementById('adSquadId').value;
-    const accessToken = document.getElementById('accessToken').value;
-    const defaultMultiplier = parseFloat(document.getElementById('defaultMultiplier').value) || 1.0;
+    try {
+        const adSquadId = document.getElementById('adSquadId').value;
+        const accessToken = document.getElementById('accessToken').value;
+        const defaultMultiplier = parseFloat(document.getElementById('defaultMultiplier').value) || 1.0;
 
-    if (!adSquadId || !accessToken) {
-        alert('Please enter both Ad Squad ID and Access Token');
-        return;
-    }
+        if (!adSquadId || !accessToken) {
+            alert('Please enter both Ad Squad ID and Access Token');
+            return;
+        }
 
     // Build multipliers object
     const multipliers = {};
@@ -80,10 +81,15 @@ function generateCode() {
 
     // Show output section
     document.getElementById('outputSection').style.display = 'block';
+    } catch (error) {
+        console.error('Error generating code:', error);
+        alert('Error generating code. Check console for details.');
+    }
 }
 
 function generateCurlCode(adSquadId, accessToken, requestBody) {
-    const curl = `curl -X PUT 'https://your-api-domain.com/api/adsquads/${adSquadId}/bid-multipliers' \\
+    const apiUrl = window.location.origin;
+    const curl = `curl -X PUT '${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers' \\
   -H 'Authorization: Bearer ${accessToken}' \\
   -H 'Content-Type: application/json' \\
   -d '${JSON.stringify(requestBody, null, 2)}'`;
@@ -92,9 +98,10 @@ function generateCurlCode(adSquadId, accessToken, requestBody) {
 }
 
 function generateJavaScriptCode(adSquadId, accessToken, requestBody) {
+    const apiUrl = window.location.origin;
     const jsCode = `// Using Fetch API
 const updateBidMultipliers = async () => {
-  const response = await fetch('https://your-api-domain.com/api/adsquads/${adSquadId}/bid-multipliers', {
+  const response = await fetch('${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers', {
     method: 'PUT',
     headers: {
       'Authorization': 'Bearer ${accessToken}',
@@ -114,11 +121,12 @@ updateBidMultipliers();`;
 }
 
 function generatePythonCode(adSquadId, accessToken, requestBody) {
+    const apiUrl = window.location.origin;
     const pythonCode = `import requests
 import json
 
 # API endpoint
-url = f"https://your-api-domain.com/api/adsquads/${adSquadId}/bid-multipliers"
+url = f"${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers"
 
 # Headers
 headers = {
