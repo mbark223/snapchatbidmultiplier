@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const targetingController_1 = require("../controllers/targetingController");
+const router = (0, express_1.Router)();
+const targetingController = new targetingController_1.TargetingController();
+router.use(auth_1.authenticate);
+router.get('/dmas', targetingController.getDMAs);
+router.get('/dmas/search', targetingController.searchDMAs);
+router.get('/states', targetingController.getStates);
+router.get('/regions', targetingController.getRegions);
+router.post('/validate', targetingController.validateMultipliers);
+exports.default = router;

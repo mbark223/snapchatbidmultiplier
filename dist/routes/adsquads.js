@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const adSquadController_1 = require("../controllers/adSquadController");
+const router = (0, express_1.Router)();
+const adSquadController = new adSquadController_1.AdSquadController();
+router.use(auth_1.authenticate);
+router.get('/:id', adSquadController.getAdSquad);
+router.put('/:id/bid-multipliers', adSquadController.updateBidMultipliers);
+router.get('/:id/bid-multipliers', adSquadController.getBidMultipliers);
+router.delete('/:id/bid-multipliers', adSquadController.removeBidMultipliers);
+exports.default = router;

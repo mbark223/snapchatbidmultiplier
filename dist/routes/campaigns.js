@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const campaignController_1 = require("../controllers/campaignController");
+const router = (0, express_1.Router)();
+const campaignController = new campaignController_1.CampaignController();
+router.use(auth_1.authenticate);
+router.get('/', campaignController.listCampaigns);
+router.get('/:id', campaignController.getCampaign);
+router.get('/:id/adsquads', campaignController.getCampaignAdSquads);
+router.post('/:id/bid-multipliers', campaignController.updateBidMultipliers);
+exports.default = router;
