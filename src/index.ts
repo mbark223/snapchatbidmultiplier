@@ -41,7 +41,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
 
 // Serve static files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+const publicPath = process.env.NODE_ENV === 'production' 
+  ? path.join(__dirname, '../../public')
+  : path.join(__dirname, '../public');
+app.use(express.static(publicPath));
 
 app.use('/api/auth', authRouter);
 app.use('/api/campaigns', campaignsRouter);
@@ -54,7 +57,10 @@ app.get('/health', (_req, res) => {
 
 // Serve index.html for root route
 app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  const indexPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '../../public/index.html')
+    : path.join(__dirname, '../public/index.html');
+  res.sendFile(indexPath);
 });
 
 app.use(errorHandler);
