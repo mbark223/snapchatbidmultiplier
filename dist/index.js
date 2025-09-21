@@ -55,6 +55,15 @@ app.get('/', (_req, res) => {
     res.sendFile(path_1.default.join(process.cwd(), 'public', 'index.html'));
 });
 app.use(errorHandler_1.errorHandler);
-app.listen(PORT, () => {
-    logger_1.logger.info(`Server is running on port ${PORT}`);
-});
+// For Vercel deployment
+if (process.env.VERCEL) {
+    // Export for Vercel
+    module.exports = app;
+}
+else {
+    // Local development
+    app.listen(PORT, () => {
+        logger_1.logger.info(`Server is running on port ${PORT}`);
+    });
+}
+exports.default = app;

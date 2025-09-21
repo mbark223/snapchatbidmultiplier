@@ -60,6 +60,15 @@ app.get('/', (_req, res) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
-});
+// For Vercel deployment
+if (process.env.VERCEL) {
+  // Export for Vercel
+  module.exports = app;
+} else {
+  // Local development
+  app.listen(PORT, () => {
+    logger.info(`Server is running on port ${PORT}`);
+  });
+}
+
+export default app;
