@@ -11,31 +11,6 @@ function generateCode() {
 
     // Build multipliers object
     const multipliers = {};
-    
-    // Gender multipliers
-    const genderMultipliers = {};
-    ['male', 'female', 'unknown'].forEach(gender => {
-        const value = parseFloat(document.getElementById(`gender-${gender}`).value);
-        if (value && value !== 1.0) {
-            genderMultipliers[gender] = value;
-        }
-    });
-    if (Object.keys(genderMultipliers).length > 0) {
-        multipliers.gender = genderMultipliers;
-    }
-
-    // Age multipliers
-    const ageMultipliers = {};
-    const ageRanges = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
-    ageRanges.forEach(age => {
-        const value = parseFloat(document.getElementById(`age-${age}`).value);
-        if (value && value !== 1.0) {
-            ageMultipliers[age] = value;
-        }
-    });
-    if (Object.keys(ageMultipliers).length > 0) {
-        multipliers.age = ageMultipliers;
-    }
 
     // State multipliers from multiselect
     if (Object.keys(selectedItems.state).length > 0) {
@@ -438,3 +413,120 @@ window.generateCode = generateCode;
 window.clearAll = clearAll;
 window.showTab = showTab;
 window.copyCode = copyCode;
+
+// Store the last generated request data
+let lastGeneratedRequest = null;
+
+// Function to execute the API call
+function executeAPICall() {
+    if (!lastGeneratedRequest) {
+        alert('Please generate API code first');
+        return;
+    }
+
+    const { adSquadId, accessToken, requestBody } = lastGeneratedRequest;
+    const apiUrl = window.location.origin;
+    const responseDiv = document.getElementById('apiResponse');
+    
+    // Show loading state
+    responseDiv.style.display = 'block';
+    responseDiv.style.background = '#e3f2fd';
+    responseDiv.style.border = '1px solid #2196f3';
+    responseDiv.style.color = '#1565c0';
+    responseDiv.innerHTML = '⏳ Executing API call...';
+    
+    fetch(`${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    })
+    .then(async response => {
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Success
+            responseDiv.style.background = '#e8f5e9';
+            responseDiv.style.border = '1px solid #4caf50';
+            responseDiv.style.color = '#2e7d32';
+            responseDiv.innerHTML = `
+                ✅ <strong>Success!</strong> Bid multipliers updated successfully.<br><br>
+                <strong>Response:</strong><br>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            `;
+        } else {
+            // Error
+            responseDiv.style.background = '#ffebee';
+            responseDiv.style.border = '1px solid #f44336';
+            responseDiv.style.color = '#c62828';
+            responseDiv.innerHTML = `
+                ❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>
+                <strong>Status:</strong> ${response.status}<br>
+                <strong>Message:</strong> ${data.error || 'Unknown error'}<br>
+                ${data.errors ? `<strong>Validation Errors:</strong><br><pre style="background: #f5f5f5; padding: 10px; border-radius: 3px;">${JSON.stringify(data.errors, null, 2)}</pre>` : ''}
+            `;
+        }
+    })
+    .catch(error => {
+        // Network error
+        responseDiv.style.background = '#ffebee';
+        responseDiv.style.border = '1px solid #f44336';
+        responseDiv.style.color = '#c62828';
+        responseDiv.innerHTML = `
+            ❌ <strong>Network Error!</strong><br><br>
+            <strong>Message:</strong> ${error.message}<br>
+            Please check your connection and try again.
+        `;
+    });
+}
+
+// Update the generateCode function to store the request data
+const originalGenerateCode = window.generateCode;
+window.generateCode = function() {
+    try {
+        const adSquadId = document.getElementById('adSquadId').value;
+        const accessToken = document.getElementById('accessToken').value;
+        const defaultMultiplier = parseFloat(document.getElementById('defaultMultiplier').value) || 1.0;
+
+        if (!adSquadId || !accessToken) {
+            alert('Please enter both Ad Squad ID and Access Token');
+            return;
+        }
+
+        // Build multipliers object
+        const multipliers = {};
+
+        // State multipliers from multiselect
+        if (Object.keys(selectedItems.state).length > 0) {
+            multipliers.us_state = { ...selectedItems.state };
+        }
+
+        // DMA multipliers from multiselect
+        if (Object.keys(selectedItems.dma).length > 0) {
+            multipliers.dma = { ...selectedItems.dma };
+        }
+
+        // Generate request body
+        const requestBody = {
+            multipliers: multipliers,
+            default_multiplier: defaultMultiplier
+        };
+
+        // Store the request data
+        lastGeneratedRequest = { adSquadId, accessToken, requestBody };
+
+        // Call the original generateCode function
+        originalGenerateCode();
+        
+        // Reset the API response display
+        const responseDiv = document.getElementById('apiResponse');
+        responseDiv.style.display = 'none';
+    } catch (error) {
+        console.error('Error in custom generateCode:', error);
+        alert('Error generating code. Check console for details.');
+    }
+};
+
+window.executeAPICall = executeAPICall;

@@ -132,24 +132,6 @@ export class AdSquadController {
   ): MultiplierConfig {
     const config: MultiplierConfig = {};
 
-    if (variables.includes('GENDER')) {
-      config.gender = {};
-      ['male', 'female', 'unknown'].forEach(gender => {
-        if (bidMultiplierMap[gender]) {
-          config.gender![gender as keyof typeof config.gender] = bidMultiplierMap[gender];
-        }
-      });
-    }
-
-    if (variables.includes('AGE')) {
-      config.age = {};
-      ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'].forEach(age => {
-        if (bidMultiplierMap[age]) {
-          config.age![age as keyof typeof config.age] = bidMultiplierMap[age];
-        }
-      });
-    }
-
     if (variables.includes('US_STATE')) {
       config.us_state = {};
       Object.entries(bidMultiplierMap).forEach(([key, value]) => {

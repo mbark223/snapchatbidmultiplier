@@ -356,58 +356,6 @@
             <input type="number" id="defaultMultiplier" value="1.0" min="0.5" max="10" step="0.1">
         </div>
 
-        <h2>Gender Multipliers</h2>
-        <div class="multiplier-section">
-            <div class="multiplier-grid">
-                <div class="multiplier-item">
-                    <label for="gender-male">Male</label>
-                    <input type="number" id="gender-male" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="gender-female">Female</label>
-                    <input type="number" id="gender-female" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="gender-unknown">Unknown</label>
-                    <input type="number" id="gender-unknown" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-            </div>
-        </div>
-
-        <h2>Age Range Multipliers</h2>
-        <div class="multiplier-section">
-            <div class="multiplier-grid">
-                <div class="multiplier-item">
-                    <label for="age-13-17">13-17</label>
-                    <input type="number" id="age-13-17" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="age-18-24">18-24</label>
-                    <input type="number" id="age-18-24" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="age-25-34">25-34</label>
-                    <input type="number" id="age-25-34" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="age-35-44">35-44</label>
-                    <input type="number" id="age-35-44" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="age-45-54">45-54</label>
-                    <input type="number" id="age-45-54" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="age-55-64">55-64</label>
-                    <input type="number" id="age-55-64" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-                <div class="multiplier-item">
-                    <label for="age-65+">65+</label>
-                    <input type="number" id="age-65+" min="0.5" max="10" step="0.1" placeholder="1.0">
-                </div>
-            </div>
-        </div>
-
         <h2>Location Multipliers</h2>
         <div class="multiplier-section">
             <div class="bid-info">
@@ -483,6 +431,11 @@
             <div class="code-output" id="rawOutput" style="display:none;">
                 <button class="copy-btn" onclick="copyCode('rawOutput')">Copy</button>
                 <pre id="rawCode"></pre>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button onclick="executeAPICall()" style="background: #27ae60;">Execute API Call</button>
+                <div id="apiResponse" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;"></div>
             </div>
         </div>
     </div>

@@ -1,8 +1,5 @@
-export type TargetingVariable = 'GENDER' | 'AGE' | 'US_STATE' | 'DMA' | 'REGION';
+export type TargetingVariable = 'US_STATE' | 'DMA' | 'REGION';
 
-export type Gender = 'male' | 'female' | 'unknown';
-
-export type AgeRange = '13-17' | '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+';
 
 export interface BidMultiplierProperties {
   variables: TargetingVariable[];
@@ -17,8 +14,6 @@ export interface BidMultiplierRequest {
 }
 
 export interface MultiplierConfig {
-  gender?: Partial<Record<Gender, number>>;
-  age?: Partial<Record<AgeRange, number>>;
   dma?: Record<string, number>;
   region?: Record<string, number>;
   us_state?: Record<string, number>;
