@@ -4,6 +4,7 @@ import { SnapchatAPIService } from '../services/snapchatAPI';
 import { ValidationService } from '../services/validationService';
 import { APIError } from '../middleware/errorHandler';
 import { MultiplierConfig } from '../types';
+import { logger } from '../utils/logger';
 
 export class AdSquadController {
   getAdSquad = async (
@@ -95,8 +96,25 @@ export class AdSquadController {
         data: updatedAdSquad,
         message: 'Bid multipliers updated successfully'
       });
-    } catch (error) {
-      next(error);
+    } catch (error: any) {
+      logger.error('Error updating bid multipliers', {
+        adSquadId: id,
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
+      
+      // If it's an Axios error with response data, provide more details
+      if (error.response?.data) {
+        const snapchatError = error.response.data;
+        next(new APIError(
+          `Snapchat API Error: ${snapchatError.error || snapchatError.message || JSON.stringify(snapchatError)}`,
+          error.response.status
+        ));
+      } else {
+        next(error);
+      }
     }
   };
 
