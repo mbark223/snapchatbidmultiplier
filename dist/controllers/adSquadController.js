@@ -4,6 +4,7 @@ exports.AdSquadController = void 0;
 const snapchatAPI_1 = require("../services/snapchatAPI");
 const validationService_1 = require("../services/validationService");
 const errorHandler_1 = require("../middleware/errorHandler");
+const logger_1 = require("../utils/logger");
 class AdSquadController {
     constructor() {
         this.getAdSquad = async (req, res, next) => {
@@ -44,8 +45,8 @@ class AdSquadController {
             }
         };
         this.updateBidMultipliers = async (req, res, next) => {
+            const { id } = req.params;
             try {
-                const { id } = req.params;
                 const { multipliers, default_multiplier = 1.0 } = req.body;
                 if (!multipliers) {
                     throw new errorHandler_1.APIError('multipliers configuration is required', 400);
@@ -70,7 +71,21 @@ class AdSquadController {
                 });
             }
             catch (error) {
-                next(error);
+                logger_1.logger.error('Error updating bid multipliers', {
+                    adSquadId: id,
+                    error: error.message,
+                    response: error.response?.data,
+                    status: error.response?.status,
+                    stack: error.stack
+                });
+                // If it's an Axios error with response data, provide more details
+                if (error.response?.data) {
+                    const snapchatError = error.response.data;
+                    next(new errorHandler_1.APIError(`Snapchat API Error: ${snapchatError.error || snapchatError.message || JSON.stringify(snapchatError)}`, error.response.status));
+                }
+                else {
+                    next(error);
+                }
             }
         };
         this.removeBidMultipliers = async (req, res, next) => {

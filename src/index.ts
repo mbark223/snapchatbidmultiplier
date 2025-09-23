@@ -101,14 +101,14 @@ app.get('/debug/test-snapchat', authenticate, async (req: any, res) => {
       }
     });
     
-    res.json({
+    return res.json({
       success: true,
       message: 'Successfully connected to Snapchat API',
       adAccountsCount: response.data.adaccounts?.length || 0,
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    res.json({
+    return res.json({
       success: false,
       error: error.response?.data || error.message,
       status: error.response?.status,

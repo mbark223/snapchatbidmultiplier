@@ -11,19 +11,84 @@ class SnapchatAPIService {
     constructor(accessToken) {
         this.handleError = (error) => {
             if (error.response) {
-                const { status, data } = error.response;
-                logger_1.logger.error('Snapchat API Error', { status, data });
-                throw new errorHandler_1.APIError(data.error_message || 'Snapchat API Error', status, data.errors);
+                const { status, data, headers } = error.response;
+                // Enhanced error logging for 401 errors
+                if (status === 401) {
+                    logger_1.logger.error('Authentication failed with Snapchat API', {
+                        status,
+                        data,
+                        responseHeaders: headers,
+                        requestUrl: error.config?.url,
+                        requestMethod: error.config?.method,
+                        hasAuthHeader: !!error.config?.headers?.Authorization,
+                        authHeaderSample: error.config?.headers?.Authorization ?
+                            error.config.headers.Authorization.substring(0, 30) + '...' : 'none'
+                    });
+                }
+                else {
+                    logger_1.logger.error('Snapchat API Error', { status, data });
+                }
+                // Extract error message from various possible formats
+                let errorMessage = 'Snapchat API Error';
+                if (data) {
+                    if (typeof data === 'object') {
+                        errorMessage = data.error_message ||
+                            data.message ||
+                            data.error ||
+                            JSON.stringify(data);
+                    }
+                    else {
+                        errorMessage = String(data);
+                    }
+                }
+                throw new errorHandler_1.APIError(errorMessage, status, data?.errors);
             }
-            throw new errorHandler_1.APIError('Network error connecting to Snapchat API', 500);
+            // Log network errors with more details
+            logger_1.logger.error('Network error connecting to Snapchat API', {
+                message: error.message,
+                code: error.code,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    baseURL: error.config?.baseURL
+                }
+            });
+            throw new errorHandler_1.APIError(`Network error: ${error.message}`, 500);
         };
+        const baseURL = process.env.SNAPCHAT_API_BASE_URL || 'https://adsapi.snapchat.com/v1';
+        logger_1.logger.info('Initializing Snapchat API client', {
+            baseURL,
+            hasToken: !!accessToken,
+            tokenLength: accessToken?.length
+        });
         this.client = axios_1.default.create({
-            baseURL: process.env.SNAPCHAT_API_BASE_URL,
+            baseURL,
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
             timeout: 30000
+        });
+        // Log requests for debugging
+        this.client.interceptors.request.use((config) => {
+            // More detailed logging for debugging auth issues
+            const authHeader = config.headers?.Authorization;
+            const tokenSample = authHeader ? authHeader.substring(0, 30) + '...' : 'none';
+            logger_1.logger.info('Snapchat API Request', {
+                url: config.url,
+                method: config.method,
+                baseURL: config.baseURL,
+                fullUrl: `${config.baseURL}${config.url}`,
+                hasAuthHeader: !!authHeader,
+                authHeaderSample: tokenSample,
+                authHeaderLength: authHeader?.length || 0,
+                headers: Object.keys(config.headers || {}),
+                data: config.data
+            });
+            return config;
+        }, (error) => {
+            logger_1.logger.error('Request interceptor error', error);
+            return Promise.reject(error);
         });
         this.client.interceptors.response.use((response) => response, this.handleError);
     }
