@@ -7,14 +7,39 @@ export class SnapchatAPIService {
   private client: AxiosInstance;
 
   constructor(accessToken: string) {
+    const baseURL = process.env.SNAPCHAT_API_BASE_URL || 'https://adsapi.snapchat.com/v1';
+    
+    logger.info('Initializing Snapchat API client', { 
+      baseURL,
+      hasToken: !!accessToken,
+      tokenLength: accessToken?.length 
+    });
+    
     this.client = axios.create({
-      baseURL: process.env.SNAPCHAT_API_BASE_URL,
+      baseURL,
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       timeout: 30000
     });
+
+    // Log requests for debugging
+    this.client.interceptors.request.use(
+      (config) => {
+        logger.debug('Snapchat API Request', {
+          url: config.url,
+          method: config.method,
+          baseURL: config.baseURL,
+          data: config.data
+        });
+        return config;
+      },
+      (error) => {
+        logger.error('Request interceptor error', error);
+        return Promise.reject(error);
+      }
+    );
 
     this.client.interceptors.response.use(
       (response: any) => response,
@@ -28,13 +53,24 @@ export class SnapchatAPIService {
       logger.error('Snapchat API Error', { status, data });
       
       throw new APIError(
-        (data as any).error_message || 'Snapchat API Error',
+        (data as any).error_message || (data as any).message || 'Snapchat API Error',
         status,
         (data as any).errors
       );
     }
     
-    throw new APIError('Network error connecting to Snapchat API', 500);
+    // Log network errors with more details
+    logger.error('Network error connecting to Snapchat API', {
+      message: error.message,
+      code: error.code,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL
+      }
+    });
+    
+    throw new APIError(`Network error: ${error.message}`, 500);
   };
 
   async getCampaigns(adAccountId: string): Promise<Campaign[]> {
