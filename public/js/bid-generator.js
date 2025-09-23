@@ -1,3 +1,132 @@
+// Initialize selectedItems immediately
+var selectedItems = {
+    state: {},
+    dma: {}
+};
+
+// US States data - defined early for global functions
+const usStates = {
+    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+    'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+    'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+    'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+    'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
+    'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
+    'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+    'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+    'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
+    'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+    'DC': 'District of Columbia'
+};
+window.usStates = usStates;
+
+// DMAs data will be loaded later
+window.dmas = [];
+
+// Immediately expose functions to global scope to support inline handlers
+// This ensures compatibility while the HTML updates propagate
+window.toggleDropdown = function(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+    dropdown.classList.toggle('active');
+    
+    // Close other dropdowns
+    document.querySelectorAll('.multiselect-dropdown').forEach(dd => {
+        if (dd.id !== dropdownId) {
+            dd.classList.remove('active');
+        }
+    });
+};
+
+window.toggleSelection = function(type, code, isChecked) {
+    const multiplierInput = document.getElementById(`${type}-${code}-multiplier`);
+    const multiplier = parseFloat(multiplierInput.value) || 1.0;
+    
+    if (isChecked) {
+        selectedItems[type][code] = multiplier;
+    } else {
+        delete selectedItems[type][code];
+    }
+    
+    updateSelectedDisplay(type);
+};
+
+window.filterOptions = function(type) {
+    const searchInput = document.querySelector(`#${type}-dropdown .search-input`);
+    const searchTerm = searchInput.value.toLowerCase();
+    const options = document.querySelectorAll(`#${type}-options .option-item`);
+    
+    options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+    });
+};
+
+window.selectAll = function(type) {
+    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        window.toggleSelection(type, checkbox.value, true);
+    });
+};
+
+window.deselectAll = function(type) {
+    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        window.toggleSelection(type, checkbox.value, false);
+    });
+};
+
+window.updateMultiplier = function(type, code, value) {
+    const checkbox = document.querySelector(`input[type="checkbox"][value="${code}"]`);
+    if (checkbox && checkbox.checked) {
+        selectedItems[type][code] = parseFloat(value) || 1.0;
+        updateSelectedDisplay(type);
+    }
+};
+
+window.removeSelection = function(type, code) {
+    delete selectedItems[type][code];
+    const checkbox = document.querySelector(`#${type}-options input[type="checkbox"][value="${code}"]`);
+    if (checkbox) {
+        checkbox.checked = false;
+    }
+    updateSelectedDisplay(type);
+};
+
+// Helper function needed by the above functions
+function updateSelectedDisplay(type) {
+    const container = document.getElementById(`selected-${type}s`);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    Object.entries(selectedItems[type]).forEach(([code, multiplier]) => {
+        const item = document.createElement('div');
+        item.className = 'selected-item';
+        
+        let displayName = code;
+        if (type === 'state') {
+            const usStates = window.usStates || {};
+            displayName = `${usStates[code] || code} (${code}): ${multiplier}`;
+        } else {
+            const dmas = window.dmas || [];
+            const dma = dmas.find(d => d.code === code);
+            displayName = `${dma ? dma.name : code}: ${multiplier}`;
+        }
+        
+        item.textContent = displayName;
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'remove';
+        removeSpan.textContent = '×';
+        removeSpan.onclick = function() {
+            window.removeSelection(type, code);
+        };
+        item.appendChild(removeSpan);
+        container.appendChild(item);
+    });
+}
+
 function generateCode() {
     try {
         const adSquadId = document.getElementById('adSquadId').value;
@@ -185,22 +314,7 @@ document.addEventListener('keypress', function(event) {
     }
 });
 
-// US States data
-const usStates = {
-    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
-    'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
-    'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
-    'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
-    'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
-    'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
-    'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
-    'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
-    'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
-    'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
-    'DC': 'District of Columbia'
-};
-
-// DMAs data
+// DMAs data (usStates already defined above)
 const dmas = [
     { code: 'DMA_501', name: 'New York', state: 'NY' },
     { code: 'DMA_803', name: 'Los Angeles', state: 'CA' },
@@ -234,12 +348,8 @@ const dmas = [
     { code: 'DMA_853', name: 'San Diego', state: 'CA' },
     { code: 'DMA_839', name: 'Las Vegas', state: 'NV' }
 ];
-
-// Store selected items
-const selectedItems = {
-    state: {},
-    dma: {}
-};
+// Make dmas globally available
+window.dmas = dmas;
 
 // Initialize dropdowns on page load
 document.addEventListener('DOMContentLoaded', function() {
