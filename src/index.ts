@@ -42,7 +42,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
 
 // Serve static files from public directory
-app.use(express.static('public'));
+const publicPath = path.join(__dirname, '..', 'public');
+app.use(express.static(publicPath));
 
 app.use('/api/auth', authRouter);
 app.use('/api/campaigns', campaignsRouter);
@@ -55,7 +56,7 @@ app.get('/health', (_req, res) => {
 
 // Serve index.html for root route
 app.get('/', (_req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 app.use(errorHandler);
