@@ -3,6 +3,14 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { APIError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
+interface OAuthTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+  scope: string;
+}
+
 export class AuthController {
   initiateLogin = async (_req: Request, res: Response, next: NextFunction) => {
     try {
@@ -97,7 +105,7 @@ export class AuthController {
         throw new APIError(`Failed to refresh token: ${error}`, response.status);
       }
       
-      const tokens = await response.json();
+      const tokens = await response.json() as OAuthTokenResponse;
       
       // Create new JWT with updated access token
       const signOptions: SignOptions = {
@@ -136,7 +144,7 @@ export class AuthController {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  private async exchangeCodeForTokens(code: string): Promise<any> {
+  private async exchangeCodeForTokens(code: string): Promise<OAuthTokenResponse> {
     const CLIENT_ID = process.env.SNAPCHAT_CLIENT_ID;
     const CLIENT_SECRET = process.env.SNAPCHAT_CLIENT_SECRET;
     const REDIRECT_URI = process.env.SNAPCHAT_REDIRECT_URI;
@@ -170,7 +178,7 @@ export class AuthController {
         throw new APIError(`Failed to exchange code for tokens: ${error}`, response.status);
       }
       
-      const tokens = await response.json();
+      const tokens = await response.json() as OAuthTokenResponse;
       return tokens;
     } catch (error) {
       logger.error('Token exchange error:', error);
