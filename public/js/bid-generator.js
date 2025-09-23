@@ -842,6 +842,22 @@ function testAuthentication() {
     .then(data => {
         console.log('Auth test success:', data);
         alert('Authentication successful! User: ' + JSON.stringify(data.user));
+        
+        // Test Snapchat API connection
+        return fetch(`${apiUrl}/debug/test-snapchat`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Snapchat API test:', data);
+        if (data.success) {
+            alert(`Snapchat API Test Success!\n\nConnected successfully\nAd Accounts found: ${data.adAccountsCount}`);
+        } else {
+            alert(`Snapchat API Test Failed!\n\nError: ${JSON.stringify(data.error)}\nStatus: ${data.status}\n\nThis indicates your token might be expired or invalid.`);
+        }
     })
     .catch(error => {
         console.error('Auth test error:', error);

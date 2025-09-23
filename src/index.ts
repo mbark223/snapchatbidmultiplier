@@ -83,6 +83,41 @@ app.get('/debug/test-auth', authenticate, (req: any, res) => {
   });
 });
 
+// Test direct Snapchat API connection
+app.get('/debug/test-snapchat', authenticate, async (req: any, res) => {
+  const axios = require('axios');
+  const token = req.user?.access_token;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'No access token found' });
+  }
+  
+  try {
+    // Try to fetch user's ad accounts as a simple test
+    const response = await axios.get('https://adsapi.snapchat.com/v1/me/adaccounts', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Successfully connected to Snapchat API',
+      adAccountsCount: response.data.adaccounts?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.json({
+      success: false,
+      error: error.response?.data || error.message,
+      status: error.response?.status,
+      headers: error.response?.headers,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Serve index.html for root route
 app.get('/', (_req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));

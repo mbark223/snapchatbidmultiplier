@@ -27,10 +27,19 @@ export class SnapchatAPIService {
     // Log requests for debugging
     this.client.interceptors.request.use(
       (config) => {
-        logger.debug('Snapchat API Request', {
+        // More detailed logging for debugging auth issues
+        const authHeader = config.headers?.Authorization as string;
+        const tokenSample = authHeader ? authHeader.substring(0, 30) + '...' : 'none';
+        
+        logger.info('Snapchat API Request', {
           url: config.url,
           method: config.method,
           baseURL: config.baseURL,
+          fullUrl: `${config.baseURL}${config.url}`,
+          hasAuthHeader: !!authHeader,
+          authHeaderSample: tokenSample,
+          authHeaderLength: authHeader?.length || 0,
+          headers: Object.keys(config.headers || {}),
           data: config.data
         });
         return config;
@@ -49,14 +58,38 @@ export class SnapchatAPIService {
 
   private handleError = (error: AxiosError) => {
     if (error.response) {
-      const { status, data } = error.response;
-      logger.error('Snapchat API Error', { status, data });
+      const { status, data, headers } = error.response;
       
-      throw new APIError(
-        (data as any).error_message || (data as any).message || 'Snapchat API Error',
-        status,
-        (data as any).errors
-      );
+      // Enhanced error logging for 401 errors
+      if (status === 401) {
+        logger.error('Authentication failed with Snapchat API', { 
+          status, 
+          data,
+          responseHeaders: headers,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+          hasAuthHeader: !!error.config?.headers?.Authorization,
+          authHeaderSample: error.config?.headers?.Authorization ? 
+            (error.config.headers.Authorization as string).substring(0, 30) + '...' : 'none'
+        });
+      } else {
+        logger.error('Snapchat API Error', { status, data });
+      }
+      
+      // Extract error message from various possible formats
+      let errorMessage = 'Snapchat API Error';
+      if (data) {
+        if (typeof data === 'object') {
+          errorMessage = (data as any).error_message || 
+                        (data as any).message || 
+                        (data as any).error || 
+                        JSON.stringify(data);
+        } else {
+          errorMessage = String(data);
+        }
+      }
+      
+      throw new APIError(errorMessage, status, (data as any)?.errors);
     }
     
     // Log network errors with more details
