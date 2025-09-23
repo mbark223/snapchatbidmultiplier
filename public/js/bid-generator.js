@@ -664,12 +664,26 @@ function executeAPICall() {
             responseDiv.style.background = '#ffebee';
             responseDiv.style.border = '1px solid #f44336';
             responseDiv.style.color = '#c62828';
-            responseDiv.innerHTML = `
-                ❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>
-                <strong>Status:</strong> ${response.status}<br>
+            
+            let errorMessage = `❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>`;
+            
+            if (response.status === 401) {
+                errorMessage += `
+                    <strong>Authentication Required</strong><br>
+                    The "Execute API Call" feature requires authentication through the OAuth flow.<br><br>
+                    <strong>To fix this:</strong><br>
+                    1. <a href="/api/auth/snapchat" style="color: #c62828; text-decoration: underline;">Login with Snapchat</a> to authenticate<br>
+                    2. Use the JWT token provided after login<br><br>
+                    <strong>Alternative:</strong> Copy the generated cURL/code and run it with your Snapchat access token.<br><br>
+                `;
+            }
+            
+            errorMessage += `<strong>Status:</strong> ${response.status}<br>
                 <strong>Message:</strong> ${data.error || 'Unknown error'}<br>
                 ${data.errors ? `<strong>Validation Errors:</strong><br><pre style="background: #f5f5f5; padding: 10px; border-radius: 3px;">${JSON.stringify(data.errors, null, 2)}</pre>` : ''}
             `;
+            
+            responseDiv.innerHTML = errorMessage;
         }
     })
     .catch(error => {
