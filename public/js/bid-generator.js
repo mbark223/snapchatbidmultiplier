@@ -853,8 +853,36 @@ function testAuthentication() {
     .then(response => response.json())
     .then(data => {
         console.log('Snapchat API test:', data);
-        if (data.success) {
-            alert(`Snapchat API Test Success!\n\nConnected successfully\nAd Accounts found: ${data.adAccountsCount}`);
+        if (data.results) {
+            let message = 'Snapchat API Test Results:\n\n';
+            
+            // Test 1: Ad Accounts
+            message += `1. Ad Accounts: ${data.results.adAccounts?.success ? '✅ Success' : '❌ Failed'}\n`;
+            if (data.results.adAccounts?.success) {
+                message += `   Found ${data.results.adAccounts.count} ad accounts\n`;
+            } else {
+                message += `   Error: ${JSON.stringify(data.results.adAccounts?.error)}\n`;
+            }
+            
+            // Test 2: Ad Squad
+            message += `\n2. Ad Squad Read: ${data.results.adSquad?.success ? '✅ Success' : '❌ Failed'}\n`;
+            if (data.results.adSquad?.success && data.results.adSquad?.data) {
+                message += `   Name: ${data.results.adSquad.data.name}\n`;
+                message += `   Status: ${data.results.adSquad.data.status}\n`;
+                message += `   Has bid multipliers: ${data.results.adSquad.data.has_bid_multipliers ? 'Yes' : 'No'}\n`;
+            } else {
+                message += `   Error: ${JSON.stringify(data.results.adSquad?.error)}\n`;
+            }
+            
+            // Test 3: User Info
+            message += `\n3. User Info: ${data.results.userInfo?.success ? '✅ Success' : '❌ Failed'}\n`;
+            if (data.results.userInfo?.success && data.results.userInfo?.data) {
+                message += `   Email: ${data.results.userInfo.data.email || 'N/A'}\n`;
+            } else {
+                message += `   Error: ${JSON.stringify(data.results.userInfo?.error)}\n`;
+            }
+            
+            alert(message);
         } else {
             alert(`Snapchat API Test Failed!\n\nError: ${JSON.stringify(data.error)}\nStatus: ${data.status}\n\nThis indicates your token might be expired or invalid.`);
         }

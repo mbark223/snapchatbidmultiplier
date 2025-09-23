@@ -92,30 +92,79 @@ app.get('/debug/test-snapchat', authenticate, async (req: any, res) => {
     return res.status(400).json({ error: 'No access token found' });
   }
   
+  const results: any = {};
+  
+  // Test 1: Try to fetch user's ad accounts
   try {
-    // Try to fetch user's ad accounts as a simple test
     const response = await axios.get('https://adsapi.snapchat.com/v1/me/adaccounts', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
-    
-    return res.json({
+    results.adAccounts = {
       success: true,
-      message: 'Successfully connected to Snapchat API',
-      adAccountsCount: response.data.adaccounts?.length || 0,
-      timestamp: new Date().toISOString()
-    });
+      count: response.data.adaccounts?.length || 0
+    };
   } catch (error: any) {
-    return res.json({
+    results.adAccounts = {
       success: false,
       error: error.response?.data || error.message,
-      status: error.response?.status,
-      headers: error.response?.headers,
-      timestamp: new Date().toISOString()
-    });
+      status: error.response?.status
+    };
   }
+  
+  // Test 2: Try to fetch the specific ad squad if adSquadId is provided
+  const adSquadId = req.query.adSquadId || 'bb019d2b-f960-47a6-b0a7-4485736d11e0'; // Using the ID from your tests
+  try {
+    const response = await axios.get(`https://adsapi.snapchat.com/v1/adsquads/${adSquadId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    results.adSquad = {
+      success: true,
+      data: response.data.adsquad ? {
+        id: response.data.adsquad.id,
+        name: response.data.adsquad.name,
+        status: response.data.adsquad.status,
+        has_bid_multipliers: !!response.data.adsquad.bid_multiplier_properties
+      } : null
+    };
+  } catch (error: any) {
+    results.adSquad = {
+      success: false,
+      error: error.response?.data || error.message,
+      status: error.response?.status
+    };
+  }
+  
+  // Test 3: Get user info
+  try {
+    const response = await axios.get('https://adsapi.snapchat.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    results.userInfo = {
+      success: true,
+      data: response.data.me
+    };
+  } catch (error: any) {
+    results.userInfo = {
+      success: false,
+      error: error.response?.data || error.message,
+      status: error.response?.status
+    };
+  }
+  
+  return res.json({
+    success: results.adAccounts?.success || results.adSquad?.success || results.userInfo?.success,
+    results,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Serve index.html for root route
