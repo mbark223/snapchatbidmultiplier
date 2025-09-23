@@ -66,8 +66,9 @@ export class AdSquadController {
     res: Response,
     next: NextFunction
   ) => {
+    const { id } = req.params;
+    
     try {
-      const { id } = req.params;
       const { multipliers, default_multiplier = 1.0 } = req.body;
 
       if (!multipliers) {
