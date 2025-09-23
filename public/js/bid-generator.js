@@ -672,7 +672,7 @@ function executeAPICall() {
                     <strong>Authentication Required</strong><br>
                     The "Execute API Call" feature requires authentication through the OAuth flow.<br><br>
                     <strong>To fix this:</strong><br>
-                    1. <a href="/api/auth/snapchat" style="color: #c62828; text-decoration: underline;">Login with Snapchat</a> to authenticate<br>
+                    1. <a href="/api/auth/login" style="color: #c62828; text-decoration: underline;">Login with Snapchat</a> to authenticate<br>
                     2. Use the JWT token provided after login<br><br>
                     <strong>Alternative:</strong> Copy the generated cURL/code and run it with your Snapchat access token.<br><br>
                 `;
