@@ -83,6 +83,21 @@ app.get('/debug/test-auth', authenticate, (req: any, res) => {
   });
 });
 
+// Simple test endpoint - no auth required
+app.get('/debug/test-config', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'API is running',
+    config: {
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasSnapchatClientId: !!process.env.SNAPCHAT_CLIENT_ID,
+      hasSnapchatClientSecret: !!process.env.SNAPCHAT_CLIENT_SECRET,
+      apiBaseUrl: process.env.SNAPCHAT_API_BASE_URL || 'https://adsapi.snapchat.com/v1',
+      nodeEnv: process.env.NODE_ENV || 'development'
+    }
+  });
+});
+
 // Test direct Snapchat API connection
 app.get('/debug/test-snapchat', authenticate, async (req: any, res) => {
   const axios = require('axios');

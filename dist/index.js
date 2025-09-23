@@ -77,6 +77,20 @@ app.get('/debug/test-auth', auth_1.authenticate, (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Simple test endpoint - no auth required
+app.get('/debug/test-config', (_req, res) => {
+    res.json({
+        success: true,
+        message: 'API is running',
+        config: {
+            hasJwtSecret: !!process.env.JWT_SECRET,
+            hasSnapchatClientId: !!process.env.SNAPCHAT_CLIENT_ID,
+            hasSnapchatClientSecret: !!process.env.SNAPCHAT_CLIENT_SECRET,
+            apiBaseUrl: process.env.SNAPCHAT_API_BASE_URL || 'https://adsapi.snapchat.com/v1',
+            nodeEnv: process.env.NODE_ENV || 'development'
+        }
+    });
+});
 // Test direct Snapchat API connection
 app.get('/debug/test-snapchat', auth_1.authenticate, async (req, res) => {
     const axios = require('axios');
@@ -84,30 +98,78 @@ app.get('/debug/test-snapchat', auth_1.authenticate, async (req, res) => {
     if (!token) {
         return res.status(400).json({ error: 'No access token found' });
     }
+    const results = {};
+    // Test 1: Try to fetch user's ad accounts
     try {
-        // Try to fetch user's ad accounts as a simple test
         const response = await axios.get('https://adsapi.snapchat.com/v1/me/adaccounts', {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
-        return res.json({
+        results.adAccounts = {
             success: true,
-            message: 'Successfully connected to Snapchat API',
-            adAccountsCount: response.data.adaccounts?.length || 0,
-            timestamp: new Date().toISOString()
-        });
+            count: response.data.adaccounts?.length || 0
+        };
     }
     catch (error) {
-        return res.json({
+        results.adAccounts = {
             success: false,
             error: error.response?.data || error.message,
-            status: error.response?.status,
-            headers: error.response?.headers,
-            timestamp: new Date().toISOString()
-        });
+            status: error.response?.status
+        };
     }
+    // Test 2: Try to fetch the specific ad squad if adSquadId is provided
+    const adSquadId = req.query.adSquadId || 'bb019d2b-f960-47a6-b0a7-4485736d11e0'; // Using the ID from your tests
+    try {
+        const response = await axios.get(`https://adsapi.snapchat.com/v1/adsquads/${adSquadId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        results.adSquad = {
+            success: true,
+            data: response.data.adsquad ? {
+                id: response.data.adsquad.id,
+                name: response.data.adsquad.name,
+                status: response.data.adsquad.status,
+                has_bid_multipliers: !!response.data.adsquad.bid_multiplier_properties
+            } : null
+        };
+    }
+    catch (error) {
+        results.adSquad = {
+            success: false,
+            error: error.response?.data || error.message,
+            status: error.response?.status
+        };
+    }
+    // Test 3: Get user info
+    try {
+        const response = await axios.get('https://adsapi.snapchat.com/v1/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        results.userInfo = {
+            success: true,
+            data: response.data.me
+        };
+    }
+    catch (error) {
+        results.userInfo = {
+            success: false,
+            error: error.response?.data || error.message,
+            status: error.response?.status
+        };
+    }
+    return res.json({
+        success: results.adAccounts?.success || results.adSquad?.success || results.userInfo?.success,
+        results,
+        timestamp: new Date().toISOString()
+    });
 });
 // Serve index.html for root route
 app.get('/', (_req, res) => {
