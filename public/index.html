@@ -365,14 +365,14 @@
             <div class="location-group">
                 <h3>US States</h3>
                 <div class="multiselect-container">
-                    <button class="multiselect-toggle" onclick="toggleDropdown('state-dropdown')">
+                    <button class="multiselect-toggle" data-dropdown="state-dropdown">
                         Select States <span class="arrow">▼</span>
                     </button>
                     <div id="state-dropdown" class="multiselect-dropdown">
-                        <input type="text" class="search-input" placeholder="Search states..." onkeyup="filterOptions('state')">
+                        <input type="text" class="search-input" placeholder="Search states..." data-type="state">
                         <div class="select-all-container">
-                            <button onclick="selectAll('state')">Select All</button>
-                            <button onclick="deselectAll('state')">Clear All</button>
+                            <button data-action="selectAll" data-type="state">Select All</button>
+                            <button data-action="deselectAll" data-type="state">Clear All</button>
                         </div>
                         <div id="state-options" class="options-container">
                             <!-- States will be added by JavaScript -->
@@ -385,14 +385,14 @@
             <div class="location-group">
                 <h3>DMAs (Designated Market Areas)</h3>
                 <div class="multiselect-container">
-                    <button class="multiselect-toggle" onclick="toggleDropdown('dma-dropdown')">
+                    <button class="multiselect-toggle" data-dropdown="dma-dropdown">
                         Select DMAs <span class="arrow">▼</span>
                     </button>
                     <div id="dma-dropdown" class="multiselect-dropdown">
-                        <input type="text" class="search-input" placeholder="Search DMAs..." onkeyup="filterOptions('dma')">
+                        <input type="text" class="search-input" placeholder="Search DMAs..." data-type="dma">
                         <div class="select-all-container">
-                            <button onclick="selectAll('dma')">Select All</button>
-                            <button onclick="deselectAll('dma')">Clear All</button>
+                            <button data-action="selectAll" data-type="dma">Select All</button>
+                            <button data-action="deselectAll" data-type="dma">Clear All</button>
                         </div>
                         <div id="dma-options" class="options-container">
                             <!-- DMAs will be added by JavaScript -->
@@ -404,37 +404,37 @@
         </div>
 
         <div style="margin-top: 30px;">
-            <button onclick="generateCode()">Generate API Code</button>
-            <button class="secondary" onclick="clearAll()">Clear All</button>
+            <button id="generateCodeBtn">Generate API Code</button>
+            <button class="secondary" id="clearAllBtn">Clear All</button>
         </div>
 
         <div class="output-section" id="outputSection">
             <h2>Generated Code</h2>
             <div class="tab-container">
-                <div class="tab active" onclick="showTab('curl')">cURL</div>
-                <div class="tab" onclick="showTab('javascript')">JavaScript</div>
-                <div class="tab" onclick="showTab('python')">Python</div>
-                <div class="tab" onclick="showTab('raw')">Raw JSON</div>
+                <div class="tab active" data-tab="curl">cURL</div>
+                <div class="tab" data-tab="javascript">JavaScript</div>
+                <div class="tab" data-tab="python">Python</div>
+                <div class="tab" data-tab="raw">Raw JSON</div>
             </div>
             <div class="code-output" id="curlOutput">
-                <button class="copy-btn" onclick="copyCode('curlOutput')">Copy</button>
+                <button class="copy-btn" data-target="curlOutput">Copy</button>
                 <pre id="curlCode"></pre>
             </div>
             <div class="code-output" id="javascriptOutput" style="display:none;">
-                <button class="copy-btn" onclick="copyCode('javascriptOutput')">Copy</button>
+                <button class="copy-btn" data-target="javascriptOutput">Copy</button>
                 <pre id="javascriptCode"></pre>
             </div>
             <div class="code-output" id="pythonOutput" style="display:none;">
-                <button class="copy-btn" onclick="copyCode('pythonOutput')">Copy</button>
+                <button class="copy-btn" data-target="pythonOutput">Copy</button>
                 <pre id="pythonCode"></pre>
             </div>
             <div class="code-output" id="rawOutput" style="display:none;">
-                <button class="copy-btn" onclick="copyCode('rawOutput')">Copy</button>
+                <button class="copy-btn" data-target="rawOutput">Copy</button>
                 <pre id="rawCode"></pre>
             </div>
             
             <div style="margin-top: 20px;">
-                <button onclick="executeAPICall()" style="background: #27ae60;">Execute API Call</button>
+                <button id="executeApiBtn" style="background: #27ae60;">Execute API Call</button>
                 <div id="apiResponse" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;"></div>
             </div>
         </div>

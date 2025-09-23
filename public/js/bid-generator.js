@@ -280,6 +280,69 @@ function initializeDropdowns() {
             dmaOptionsContainer.appendChild(optionDiv);
         });
         
+        // Add event listeners for dropdown toggles
+        document.querySelectorAll('.multiselect-toggle').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const dropdownId = this.getAttribute('data-dropdown');
+                toggleDropdown(dropdownId);
+            });
+        });
+        
+        // Add event listeners for search inputs
+        document.querySelectorAll('.search-input').forEach(input => {
+            input.addEventListener('keyup', function() {
+                const type = this.getAttribute('data-type');
+                filterOptions(type);
+            });
+        });
+        
+        // Add event listeners for select all/clear all buttons
+        document.querySelectorAll('.select-all-container button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const type = this.getAttribute('data-type');
+                const action = this.getAttribute('data-action');
+                if (action === 'selectAll') {
+                    selectAll(type);
+                } else if (action === 'deselectAll') {
+                    deselectAll(type);
+                }
+            });
+        });
+        
+        // Add event listeners for main buttons
+        const generateBtn = document.getElementById('generateCodeBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', generateCode);
+        }
+        
+        const clearBtn = document.getElementById('clearAllBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', clearAll);
+        }
+        
+        const executeBtn = document.getElementById('executeApiBtn');
+        if (executeBtn) {
+            executeBtn.addEventListener('click', executeAPICall);
+        }
+        
+        // Add event listeners for tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabName = this.getAttribute('data-tab');
+                showTab(tabName);
+            });
+        });
+        
+        // Add event listeners for copy buttons
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                copyCode(targetId);
+            });
+        });
+        
         console.log('Dropdowns initialized successfully');
     } catch (error) {
         console.error('Error initializing dropdowns:', error);
@@ -289,13 +352,32 @@ function initializeDropdowns() {
 function createOptionItem(type, code, displayName) {
     const div = document.createElement('div');
     div.className = 'option-item';
-    div.innerHTML = `
-        <label>
-            <input type="checkbox" value="${code}" onchange="toggleSelection('${type}', '${code}', this.checked)">
-            ${displayName}
-        </label>
-        <input type="number" id="${type}-${code}-multiplier" min="0.5" max="10" step="0.1" value="1.0" onchange="updateMultiplier('${type}', '${code}', this.value)">
-    `;
+    
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = code;
+    checkbox.addEventListener('change', function() {
+        toggleSelection(type, code, this.checked);
+    });
+    
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(' ' + displayName));
+    
+    const multiplierInput = document.createElement('input');
+    multiplierInput.type = 'number';
+    multiplierInput.id = `${type}-${code}-multiplier`;
+    multiplierInput.min = '0.5';
+    multiplierInput.max = '10';
+    multiplierInput.step = '0.1';
+    multiplierInput.value = '1.0';
+    multiplierInput.addEventListener('change', function() {
+        updateMultiplier(type, code, this.value);
+    });
+    
+    div.appendChild(label);
+    div.appendChild(multiplierInput);
+    
     return div;
 }
 
@@ -348,10 +430,14 @@ function updateSelectedDisplay(type) {
             displayName = `${dma ? dma.name : code}: ${multiplier}`;
         }
         
-        item.innerHTML = `
-            ${displayName}
-            <span class="remove" onclick="removeSelection('${type}', '${code}')">×</span>
-        `;
+        item.textContent = displayName;
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'remove';
+        removeSpan.textContent = '×';
+        removeSpan.addEventListener('click', function() {
+            removeSelection(type, code);
+        });
+        item.appendChild(removeSpan);
         container.appendChild(item);
     });
 }
