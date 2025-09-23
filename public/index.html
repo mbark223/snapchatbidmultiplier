@@ -376,9 +376,13 @@
             <label for="accessToken">Access Token</label>
             <input type="text" id="accessToken" placeholder="Enter your Snapchat API Access Token">
             <small style="color: #666; display: block; margin-top: 5px; line-height: 1.4;">
-                ℹ️ <strong>Note:</strong> Enter your Snapchat API access token above to generate code.<br>
-                The "Execute API Call" button requires OAuth setup (currently unavailable).<br>
-                <strong>Recommended:</strong> Use the generated cURL/JavaScript/Python code with your access token.
+                ℹ️ <strong>Two ways to use this tool:</strong><br>
+                <strong>Option 1:</strong> Enter your Snapchat API access token to generate code you can run manually<br>
+                <strong>Option 2:</strong> <a href="#" id="oauthLoginLink" style="color: #1976d2; text-decoration: underline;">Login with Snapchat</a> to use the Execute API Call button
+                <span id="authStatus" style="display: none; color: #4caf50;">
+                    ✓ Authenticated 
+                    <a href="#" id="logoutLink" style="color: #f44336; text-decoration: underline; margin-left: 10px;">Logout</a>
+                </span>
             </small>
         </div>
 

@@ -36,11 +36,15 @@ export class AuthController {
 
   handleCallback = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { code } = req.query;
+      const { code, state } = req.query;
 
       if (!code) {
         throw new APIError('Authorization code missing', 400);
       }
+      
+      // In production, validate state parameter to prevent CSRF
+      // For now, we'll log it
+      logger.info('OAuth callback received', { state });
 
       // Exchange code for tokens
       const tokens = await this.exchangeCodeForTokens(code as string);
@@ -60,10 +64,13 @@ export class AuthController {
         signOptions
       );
 
-      res.json({
-        token: appToken,
-        expires_in: tokens.expires_in
-      });
+      // Redirect to frontend with token
+      const frontendUrl = process.env.FRONTEND_URL || '/';
+      const redirectUrl = new URL(frontendUrl, `${req.protocol}://${req.get('host')}`);
+      redirectUrl.searchParams.append('token', appToken);
+      redirectUrl.searchParams.append('expires_in', tokens.expires_in.toString());
+      
+      res.redirect(redirectUrl.toString());
     } catch (error) {
       next(error);
     }

@@ -2,6 +2,16 @@
 
 A TypeScript/Express API for managing Snapchat campaign bid multipliers with support for granular targeting across Gender, Age, DMA, and State dimensions.
 
+## 🚀 Web Interface Available!
+
+This tool includes a user-friendly web interface that lets you:
+- Generate API code (cURL, JavaScript, Python) without authentication
+- Use OAuth authentication for direct API execution
+- Select multiple states and DMAs with custom multipliers
+- No coding required for basic usage
+
+Visit the deployed app and start using it immediately!
+
 ## Features
 
 - OAuth 2.0 authentication with Snapchat Ads API
@@ -35,13 +45,24 @@ cp .env.example .env
 
 ## Configuration
 
+### Basic Setup (Code Generation Only)
+No configuration needed! The web interface works out of the box for generating API code.
+
+### OAuth Setup (For Execute API Call Button)
+To enable the "Execute API Call" button, you'll need to set up OAuth authentication.
+See [OAUTH_SETUP.md](./OAUTH_SETUP.md) for detailed instructions.
+
 Update the `.env` file with your credentials:
 
 ```env
+# Snapchat OAuth credentials
 SNAPCHAT_CLIENT_ID=your_client_id_here
 SNAPCHAT_CLIENT_SECRET=your_client_secret_here
-SNAPCHAT_REDIRECT_URI=http://localhost:3000/api/auth/callback
+SNAPCHAT_REDIRECT_URI=https://yourdomain.com/api/auth/callback
+
+# Security
 JWT_SECRET=your_jwt_secret_here
+JWT_EXPIRES_IN=24h
 ```
 
 ## Development

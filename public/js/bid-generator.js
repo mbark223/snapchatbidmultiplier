@@ -4,6 +4,43 @@ var selectedItems = {
     dma: {}
 };
 
+// OAuth token management
+const TokenManager = {
+    TOKEN_KEY: 'snapchat_jwt_token',
+    TOKEN_EXPIRY_KEY: 'snapchat_jwt_expiry',
+    
+    saveToken(token, expiresIn) {
+        localStorage.setItem(this.TOKEN_KEY, token);
+        // Calculate expiry time (subtract 5 minutes for safety)
+        const expiryTime = Date.now() + ((expiresIn - 300) * 1000);
+        localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+    },
+    
+    getToken() {
+        const token = localStorage.getItem(this.TOKEN_KEY);
+        const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
+        
+        if (!token || !expiry) return null;
+        
+        // Check if token is expired
+        if (Date.now() > parseInt(expiry)) {
+            this.clearToken();
+            return null;
+        }
+        
+        return token;
+    },
+    
+    clearToken() {
+        localStorage.removeItem(this.TOKEN_KEY);
+        localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+    },
+    
+    isAuthenticated() {
+        return this.getToken() !== null;
+    }
+};
+
 // US States data - defined early for global functions
 const usStates = {
     'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
@@ -460,6 +497,9 @@ function initializeDropdowns() {
             });
         });
         
+        // Initialize OAuth
+        initializeOAuth();
+        
         console.log('Dropdowns initialized successfully');
     } catch (error) {
         console.error('Error initializing dropdowns:', error);
@@ -748,3 +788,222 @@ window.generateCode = function() {
 };
 
 window.executeAPICall = executeAPICall;
+window.initiateOAuthFlow = initiateOAuthFlow;
+
+// OAuth Functions
+function initializeOAuth() {
+    // Check for OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const expiresIn = urlParams.get('expires_in');
+    
+    if (token && expiresIn) {
+        // Save token and redirect to clean URL
+        TokenManager.saveToken(token, parseInt(expiresIn));
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showAuthSuccess();
+    }
+    
+    // Update UI based on auth status
+    updateAuthUI();
+    
+    // Set up login link
+    const loginLink = document.getElementById('oauthLoginLink');
+    if (loginLink) {
+        loginLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            initiateOAuthFlow();
+        });
+    }
+    
+    // Set up logout link
+    const logoutLink = document.getElementById('logoutLink');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+    }
+    
+    // Check token validity periodically
+    setInterval(updateAuthUI, 30000); // Every 30 seconds
+}
+
+function updateAuthUI() {
+    const authStatus = document.getElementById('authStatus');
+    const accessTokenInput = document.getElementById('accessToken');
+    const executeBtn = document.getElementById('executeApiBtn');
+    
+    if (TokenManager.isAuthenticated()) {
+        if (authStatus) authStatus.style.display = 'inline';
+        if (accessTokenInput) {
+            accessTokenInput.placeholder = 'Using OAuth authentication';
+            accessTokenInput.disabled = true;
+        }
+        if (executeBtn) {
+            executeBtn.textContent = 'Execute API Call (Authenticated)';
+            executeBtn.style.background = '#4caf50';
+        }
+    } else {
+        if (authStatus) authStatus.style.display = 'none';
+        if (accessTokenInput) {
+            accessTokenInput.placeholder = 'Enter your Snapchat API Access Token';
+            accessTokenInput.disabled = false;
+        }
+        if (executeBtn) {
+            executeBtn.textContent = 'Execute API Call';
+            executeBtn.style.background = '#27ae60';
+        }
+    }
+}
+
+function initiateOAuthFlow() {
+    // First, check if OAuth is configured
+    fetch('/api/auth/login')
+        .then(response => response.json())
+        .then(data => {
+            if (data.auth_url) {
+                // Redirect to Snapchat OAuth
+                window.location.href = data.auth_url;
+            } else {
+                alert('OAuth is not configured on this server. Please use Option 1 with your access token.');
+            }
+        })
+        .catch(error => {
+            console.error('OAuth error:', error);
+            alert('Unable to start OAuth flow. Please use Option 1 with your access token.');
+        });
+}
+
+function showAuthSuccess() {
+    const responseDiv = document.getElementById('apiResponse');
+    if (responseDiv) {
+        responseDiv.style.display = 'block';
+        responseDiv.style.background = '#e8f5e9';
+        responseDiv.style.border = '1px solid #4caf50';
+        responseDiv.style.color = '#2e7d32';
+        responseDiv.innerHTML = '✅ <strong>Successfully authenticated with Snapchat!</strong> You can now use the Execute API Call button.';
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+            responseDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+function logout() {
+    TokenManager.clearToken();
+    updateAuthUI();
+    
+    const responseDiv = document.getElementById('apiResponse');
+    if (responseDiv) {
+        responseDiv.style.display = 'block';
+        responseDiv.style.background = '#fff3cd';
+        responseDiv.style.border = '1px solid #ffc107';
+        responseDiv.style.color = '#856404';
+        responseDiv.innerHTML = '👋 <strong>Logged out successfully.</strong> You can still generate code or login again to use Execute API Call.';
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            responseDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Update executeAPICall to use OAuth token if available
+const originalExecuteAPICall = executeAPICall;
+executeAPICall = function() {
+    if (!lastGeneratedRequest) {
+        alert('Please generate API code first');
+        return;
+    }
+
+    const { adSquadId, accessToken, requestBody } = lastGeneratedRequest;
+    const apiUrl = window.location.origin;
+    const responseDiv = document.getElementById('apiResponse');
+    
+    // Check if we have an OAuth token
+    const jwtToken = TokenManager.getToken();
+    const authToken = jwtToken || accessToken;
+    const isOAuth = !!jwtToken;
+    
+    if (!authToken) {
+        alert('Please either login with Snapchat or enter an access token');
+        return;
+    }
+    
+    // Show loading state
+    responseDiv.style.display = 'block';
+    responseDiv.style.background = '#e3f2fd';
+    responseDiv.style.border = '1px solid #2196f3';
+    responseDiv.style.color = '#1565c0';
+    responseDiv.innerHTML = '⏳ Executing API call' + (isOAuth ? ' with OAuth authentication' : '') + '...';
+    
+    fetch(`${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    })
+    .then(async response => {
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Success
+            responseDiv.style.background = '#e8f5e9';
+            responseDiv.style.border = '1px solid #4caf50';
+            responseDiv.style.color = '#2e7d32';
+            responseDiv.innerHTML = `
+                ✅ <strong>Success!</strong> Bid multipliers updated successfully.<br><br>
+                <strong>Response:</strong><br>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            `;
+        } else {
+            // Error
+            responseDiv.style.background = '#ffebee';
+            responseDiv.style.border = '1px solid #f44336';
+            responseDiv.style.color = '#c62828';
+            
+            let errorMessage = `❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>`;
+            
+            if (response.status === 401 && !isOAuth) {
+                errorMessage += `
+                    <strong>Authentication Failed</strong><br>
+                    Your access token may be invalid or expired.<br><br>
+                    <strong>Options:</strong><br>
+                    1. <a href="#" onclick="initiateOAuthFlow(); return false;" style="color: #c62828; text-decoration: underline;">Login with Snapchat</a> for automatic authentication<br>
+                    2. Get a fresh access token from Snapchat and try again<br><br>
+                `;
+            } else if (response.status === 401 && isOAuth) {
+                // OAuth token expired
+                TokenManager.clearToken();
+                updateAuthUI();
+                errorMessage += `
+                    <strong>Session Expired</strong><br>
+                    Your authentication session has expired.<br>
+                    <a href="#" onclick="initiateOAuthFlow(); return false;" style="color: #c62828; text-decoration: underline;">Login again</a><br><br>
+                `;
+            }
+            
+            errorMessage += `<strong>Status:</strong> ${response.status}<br>
+                <strong>Message:</strong> ${data.error || 'Unknown error'}<br>
+                ${data.errors ? `<strong>Validation Errors:</strong><br><pre style="background: #f5f5f5; padding: 10px; border-radius: 3px;">${JSON.stringify(data.errors, null, 2)}</pre>` : ''}
+            `;
+            
+            responseDiv.innerHTML = errorMessage;
+        }
+    })
+    .catch(error => {
+        // Network error
+        responseDiv.style.background = '#ffebee';
+        responseDiv.style.border = '1px solid #f44336';
+        responseDiv.style.color = '#c62828';
+        responseDiv.innerHTML = `
+            ❌ <strong>Network Error!</strong><br><br>
+            Failed to connect to the API server.<br>
+            <strong>Error:</strong> ${error.message}
+        `;
+    });
+};
