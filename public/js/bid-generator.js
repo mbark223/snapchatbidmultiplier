@@ -481,6 +481,11 @@ function initializeDropdowns() {
             executeBtn.addEventListener('click', executeAPICall);
         }
         
+        const testAuthBtn = document.getElementById('testAuthBtn');
+        if (testAuthBtn) {
+            testAuthBtn.addEventListener('click', testAuthentication);
+        }
+        
         // Add event listeners for tabs
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', function() {
@@ -789,6 +794,44 @@ window.generateCode = function() {
 
 window.executeAPICall = executeAPICall;
 window.initiateOAuthFlow = initiateOAuthFlow;
+
+// Test authentication function
+function testAuthentication() {
+    const accessToken = document.getElementById('accessToken').value;
+    
+    if (!accessToken) {
+        alert('Please enter an access token first');
+        return;
+    }
+    
+    const apiUrl = window.location.origin;
+    console.log('Testing authentication...');
+    
+    // First test without auth
+    fetch(`${apiUrl}/debug/auth`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Debug endpoint (no auth):', data);
+        });
+    
+    // Then test with auth header
+    fetch(`${apiUrl}/debug/auth`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Debug endpoint (with auth):', data);
+        alert(`Auth Header Test:\n\nReceived: ${data.hasAuthHeader ? 'Yes' : 'No'}\nLength: ${data.headerLength}\nHeaders: ${data.allHeaders.join(', ')}`);
+    })
+    .catch(error => {
+        console.error('Auth test error:', error);
+        alert('Auth test failed: ' + error.message);
+    });
+}
+
+window.testAuthentication = testAuthentication;
 
 // OAuth Functions
 function initializeOAuth() {

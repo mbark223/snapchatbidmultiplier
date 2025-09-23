@@ -54,6 +54,17 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint to check auth header
+app.get('/debug/auth', (req, res) => {
+  res.json({
+    hasAuthHeader: !!req.headers.authorization,
+    authHeader: req.headers.authorization ? 'Bearer ...' : 'none',
+    headerLength: req.headers.authorization?.length || 0,
+    allHeaders: Object.keys(req.headers),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Serve index.html for root route
 app.get('/', (_req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
