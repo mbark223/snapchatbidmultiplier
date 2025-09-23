@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { errorHandler } from './middleware/errorHandler';
+import { authenticate } from './middleware/auth';
 import { logger } from './utils/logger';
 import campaignsRouter from './routes/campaigns';
 import adsquadsRouter from './routes/adsquads';
@@ -56,11 +57,28 @@ app.get('/health', (_req, res) => {
 
 // Debug endpoint to check auth header
 app.get('/debug/auth', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace('Bearer ', '');
+  
   res.json({
-    hasAuthHeader: !!req.headers.authorization,
-    authHeader: req.headers.authorization ? 'Bearer ...' : 'none',
-    headerLength: req.headers.authorization?.length || 0,
+    hasAuthHeader: !!authHeader,
+    authHeader: authHeader ? 'Bearer ...' : 'none',
+    headerLength: authHeader?.length || 0,
+    tokenLength: token?.length || 0,
+    startsWithBearer: authHeader?.startsWith('Bearer '),
+    tokenStartsWith: token ? token.substring(0, 20) + '...' : 'none',
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    jwtSecretLength: process.env.JWT_SECRET?.length || 0,
     allHeaders: Object.keys(req.headers),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test the actual auth middleware
+app.get('/debug/test-auth', authenticate, (req: any, res) => {
+  res.json({
+    authenticated: true,
+    user: req.user,
     timestamp: new Date().toISOString()
   });
 });

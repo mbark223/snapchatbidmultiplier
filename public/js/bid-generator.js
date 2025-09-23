@@ -823,11 +823,29 @@ function testAuthentication() {
     .then(response => response.json())
     .then(data => {
         console.log('Debug endpoint (with auth):', data);
-        alert(`Auth Header Test:\n\nReceived: ${data.hasAuthHeader ? 'Yes' : 'No'}\nLength: ${data.headerLength}\nHeaders: ${data.allHeaders.join(', ')}`);
+        alert(`Auth Header Debug:\n\nReceived: ${data.hasAuthHeader ? 'Yes' : 'No'}\nStarts with Bearer: ${data.startsWithBearer}\nToken Length: ${data.tokenLength}\nHas JWT_SECRET: ${data.hasJwtSecret}\nToken starts with: ${data.tokenStartsWith}`);
+        
+        // Now test actual auth middleware
+        return fetch(`${apiUrl}/debug/test-auth`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+    })
+    .then(response => {
+        console.log('Auth test response:', response);
+        if (!response.ok) {
+            throw new Error(`Auth failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Auth test success:', data);
+        alert('Authentication successful! User: ' + JSON.stringify(data.user));
     })
     .catch(error => {
         console.error('Auth test error:', error);
-        alert('Auth test failed: ' + error.message);
+        alert('Auth middleware test failed: ' + error.message);
     });
 }
 
