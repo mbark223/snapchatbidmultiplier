@@ -667,14 +667,15 @@ function executeAPICall() {
             
             let errorMessage = `❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>`;
             
-            if (response.status === 401) {
+            if (response.status === 401 || response.status === 500) {
                 errorMessage += `
-                    <strong>Authentication Required</strong><br>
-                    The "Execute API Call" feature requires authentication through the OAuth flow.<br><br>
-                    <strong>To fix this:</strong><br>
-                    1. <a href="/api/auth/login" style="color: #c62828; text-decoration: underline;">Login with Snapchat</a> to authenticate<br>
-                    2. Use the JWT token provided after login<br><br>
-                    <strong>Alternative:</strong> Copy the generated cURL/code and run it with your Snapchat access token.<br><br>
+                    <strong>OAuth Not Configured</strong><br>
+                    The "Execute API Call" feature requires OAuth setup which is not currently configured.<br><br>
+                    <strong>Recommended Solution:</strong><br>
+                    1. Copy the generated cURL, JavaScript, or Python code above<br>
+                    2. Run it directly with your Snapchat API access token<br>
+                    3. This will update your bid multipliers successfully<br><br>
+                    <em>Note: The Execute API Call button is for convenience only - the generated code works perfectly!</em><br><br>
                 `;
             }
             

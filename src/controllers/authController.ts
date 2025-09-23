@@ -6,10 +6,11 @@ import { logger } from '../utils/logger';
 export class AuthController {
   initiateLogin = async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const { CLIENT_ID, REDIRECT_URI } = process.env;
+      const CLIENT_ID = process.env.SNAPCHAT_CLIENT_ID;
+      const REDIRECT_URI = process.env.SNAPCHAT_REDIRECT_URI;
       
       if (!CLIENT_ID || !REDIRECT_URI) {
-        throw new APIError('OAuth configuration missing', 500);
+        throw new APIError('OAuth configuration missing. Please set SNAPCHAT_CLIENT_ID and SNAPCHAT_REDIRECT_URI environment variables.', 500);
       }
 
       const authUrl = new URL('https://accounts.snapchat.com/login/oauth2/authorize');
@@ -68,8 +69,55 @@ export class AuthController {
         throw new APIError('Refresh token required', 400);
       }
 
-      // Implementation for token refresh
-      res.json({ message: 'Token refresh endpoint - to be implemented' });
+      const CLIENT_ID = process.env.SNAPCHAT_CLIENT_ID;
+      const CLIENT_SECRET = process.env.SNAPCHAT_CLIENT_SECRET;
+      
+      if (!CLIENT_ID || !CLIENT_SECRET) {
+        throw new APIError('OAuth configuration missing. Please set SNAPCHAT_CLIENT_ID and SNAPCHAT_CLIENT_SECRET environment variables.', 500);
+      }
+      
+      const tokenUrl = 'https://accounts.snapchat.com/login/oauth2/access_token';
+      const params = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refresh_token,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET
+      });
+      
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new APIError(`Failed to refresh token: ${error}`, response.status);
+      }
+      
+      const tokens = await response.json();
+      
+      // Create new JWT with updated access token
+      const signOptions: SignOptions = {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+      } as SignOptions;
+      
+      const appToken = jwt.sign(
+        {
+          id: 'user_id', // In production, extract from current JWT
+          email: 'user@email.com', // Extract from current JWT
+          access_token: tokens.access_token
+        },
+        process.env.JWT_SECRET!,
+        signOptions
+      );
+
+      res.json({
+        token: appToken,
+        expires_in: tokens.expires_in
+      });
     } catch (error) {
       next(error);
     }
@@ -88,17 +136,45 @@ export class AuthController {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  private async exchangeCodeForTokens(_code: string): Promise<any> {
-    // Implementation to exchange authorization code for access tokens
-    // This would make a request to Snapchat's OAuth token endpoint
+  private async exchangeCodeForTokens(code: string): Promise<any> {
+    const CLIENT_ID = process.env.SNAPCHAT_CLIENT_ID;
+    const CLIENT_SECRET = process.env.SNAPCHAT_CLIENT_SECRET;
+    const REDIRECT_URI = process.env.SNAPCHAT_REDIRECT_URI;
+    
+    if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+      throw new APIError('OAuth configuration missing. Please set SNAPCHAT_CLIENT_ID, SNAPCHAT_CLIENT_SECRET, and SNAPCHAT_REDIRECT_URI environment variables.', 500);
+    }
+    
     logger.info('Exchanging code for tokens');
     
-    // Mock response for now
-    return {
-      access_token: 'mock_access_token',
-      refresh_token: 'mock_refresh_token',
-      expires_in: 3600,
-      token_type: 'Bearer'
-    };
+    try {
+      const tokenUrl = 'https://accounts.snapchat.com/login/oauth2/access_token';
+      const params = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        redirect_uri: REDIRECT_URI
+      });
+      
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new APIError(`Failed to exchange code for tokens: ${error}`, response.status);
+      }
+      
+      const tokens = await response.json();
+      return tokens;
+    } catch (error) {
+      logger.error('Token exchange error:', error);
+      throw error;
+    }
   }
 }
