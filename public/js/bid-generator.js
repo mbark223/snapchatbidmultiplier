@@ -475,7 +475,7 @@ function createOptionItem(type, code, displayName) {
     checkbox.type = 'checkbox';
     checkbox.value = code;
     checkbox.addEventListener('change', function() {
-        toggleSelection(type, code, this.checked);
+        window.toggleSelection(type, code, this.checked);
     });
     
     label.appendChild(checkbox);
@@ -489,7 +489,7 @@ function createOptionItem(type, code, displayName) {
     multiplierInput.step = '0.1';
     multiplierInput.value = '1.0';
     multiplierInput.addEventListener('change', function() {
-        updateMultiplier(type, code, this.value);
+        window.updateMultiplier(type, code, this.value);
     });
     
     div.appendChild(label);

@@ -341,9 +341,15 @@
             min-height: 40px;
         }
         
-        /* Debug styles */
-        .multiselect-toggle::before {
-            content: '';
+        /* Debug styles - ensure buttons are always visible */
+        .multiselect-toggle {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Fallback text if button content is missing */
+        .multiselect-toggle:empty::after {
+            content: 'Click to select options';
         }
     </style>
 </head>
@@ -460,6 +466,6 @@
         </div>
     </div>
 
-    <script src="/js/bid-generator.js"></script>
+    <script src="js/bid-generator.js"></script>
 </body>
 </html>
