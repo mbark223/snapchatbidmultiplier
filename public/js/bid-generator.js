@@ -351,21 +351,28 @@ const dmas = [
 // Make dmas globally available
 window.dmas = dmas;
 
-// Initialize dropdowns on page load
-document.addEventListener('DOMContentLoaded', function() {
-    initializeDropdowns();
-});
-
-// Also initialize if DOM is already loaded
+// Initialize dropdowns when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDropdowns);
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded - Initializing dropdowns');
+        initializeDropdowns();
+    });
 } else {
     // DOM is already loaded
+    console.log('DOM already loaded - Initializing dropdowns immediately');
     initializeDropdowns();
 }
 
 function initializeDropdowns() {
     try {
+        console.log('Starting initializeDropdowns function');
+        
+        // Debug: Check if buttons exist
+        const stateButton = document.querySelector('.multiselect-toggle[data-dropdown="state-dropdown"]');
+        const dmaButton = document.querySelector('.multiselect-toggle[data-dropdown="dma-dropdown"]');
+        console.log('State button found:', !!stateButton);
+        console.log('DMA button found:', !!dmaButton);
+        
         // Populate states
         const stateOptionsContainer = document.getElementById('state-options');
         if (!stateOptionsContainer) {

@@ -209,9 +209,14 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             cursor: pointer;
-            display: flex;
+            display: flex !important;
             justify-content: space-between;
             align-items: center;
+            color: #333;
+            font-size: 14px;
+            font-weight: normal;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
         .multiselect-toggle:hover {
@@ -324,6 +329,21 @@
         
         .selected-item .remove:hover {
             color: #d32f2f;
+        }
+        
+        /* Ensure button elements are visible */
+        button.multiselect-toggle {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: white;
+            color: #333;
+            min-height: 40px;
+        }
+        
+        /* Debug styles */
+        .multiselect-toggle::before {
+            content: '';
         }
     </style>
 </head>
