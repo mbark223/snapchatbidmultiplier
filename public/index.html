@@ -471,6 +471,11 @@
         </div>
     </div>
 
-    <script src="js/bid-generator.js"></script>
+    <script>
+        // Debug script to help identify 404 issues
+        console.log('Page loaded from:', window.location.href);
+        console.log('Script will load from:', new URL('js/bid-generator.js', window.location.href).href);
+    </script>
+    <script src="js/bid-generator.js" onerror="console.error('Failed to load bid-generator.js from path:', this.src)"></script>
 </body>
 </html>
