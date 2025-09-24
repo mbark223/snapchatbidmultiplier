@@ -1,5 +1,5 @@
 // Minimal environment check
-export default function handler(req, res) {
+module.exports = (req, res) => {
   const envVars = {
     method: req.method,
     url: req.url,
@@ -15,4 +15,4 @@ export default function handler(req, res) {
   };
   
   res.status(200).json(envVars);
-}
+};
