@@ -201,7 +201,10 @@ function generateCurlCode(adSquadId, accessToken, requestBody) {
     // Convert to Snapchat API format
     const snapchatRequestBody = {
         adsquad: {
-            bid_multiplier_properties: requestBody.bid_multiplier_properties
+            bid_multiplier_properties: {
+                multipliers: requestBody.multipliers,
+                default_multiplier: requestBody.default_multiplier
+            }
         }
     };
     
@@ -217,7 +220,10 @@ function generateJavaScriptCode(adSquadId, accessToken, requestBody) {
     // Convert to Snapchat API format
     const snapchatRequestBody = {
         adsquad: {
-            bid_multiplier_properties: requestBody.bid_multiplier_properties
+            bid_multiplier_properties: {
+                multipliers: requestBody.multipliers,
+                default_multiplier: requestBody.default_multiplier
+            }
         }
     };
     
@@ -246,7 +252,10 @@ function generatePythonCode(adSquadId, accessToken, requestBody) {
     // Convert to Snapchat API format
     const snapchatRequestBody = {
         adsquad: {
-            bid_multiplier_properties: requestBody.bid_multiplier_properties
+            bid_multiplier_properties: {
+                multipliers: requestBody.multipliers,
+                default_multiplier: requestBody.default_multiplier
+            }
         }
     };
     
@@ -283,7 +292,10 @@ function generateRawJSON(requestBody) {
     // Convert to Snapchat API format
     const snapchatRequestBody = {
         adsquad: {
-            bid_multiplier_properties: requestBody.bid_multiplier_properties
+            bid_multiplier_properties: {
+                multipliers: requestBody.multipliers,
+                default_multiplier: requestBody.default_multiplier
+            }
         }
     };
     document.getElementById('rawCode').textContent = JSON.stringify(snapchatRequestBody, null, 2);
