@@ -943,10 +943,13 @@ function initializeOAuth() {
     // Update UI based on auth status
     updateAuthUI();
     
-    // OAuth is not configured, so hide login link
+    // Set up login link
     const loginLink = document.getElementById('oauthLoginLink');
     if (loginLink) {
-        loginLink.style.display = 'none';
+        loginLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            initiateOAuthFlow();
+        });
     }
     
     // Set up logout link
