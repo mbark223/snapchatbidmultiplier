@@ -380,15 +380,17 @@
                 You need a <strong>Marketing API OAuth access token</strong>, NOT a Conversions API token.<br>
                 <span style="color: #d32f2f;">❌ Conversions API tokens (like WFIZTM0ZS...) will NOT work</span><br>
                 <span style="color: #388e3c;">✅ You need an OAuth access token from the Marketing API</span><br>
-                <span style="color: #388e3c;">✅ OAuth is ready! Click "Connect with Snapchat" below to authenticate.</span>
+                <br>
+                <strong style="color: #1976d2;">How to get your token:</strong><br>
+                1. Use the manual script: <code>./get-token-manual.sh</code><br>
+                2. Or get a token from your existing Snapchat integration<br>
+                3. Paste the token above and click "Generate Code"
                 <span id="authStatus" style="display: none; color: #4caf50;">
                     ✓ Token entered 
                     <a href="#" id="logoutLink" style="color: #f44336; text-decoration: underline; margin-left: 10px;">Clear</a>
                 </span>
             </small>
-            <button id="oauthLoginLink" type="button" class="btn" style="background: #FFFC00; color: #000; margin-top: 10px;">
-                Connect with Snapchat
-            </button>
+            <!-- OAuth button removed - use direct token instead -->
         </div>
 
         <div class="input-group">
