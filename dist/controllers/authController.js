@@ -18,7 +18,12 @@ class AuthController {
                 }
                 const authUrl = new URL('https://accounts.snapchat.com/login/oauth2/authorize');
                 authUrl.searchParams.append('client_id', CLIENT_ID);
-                authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+                // Force correct redirect URI
+                const correctRedirectUri = REDIRECT_URI.includes('/api/auth/callback')
+                    ? REDIRECT_URI
+                    : REDIRECT_URI.replace('/auth/callback', '/api/auth/callback');
+                authUrl.searchParams.append('redirect_uri', correctRedirectUri);
+                logger_1.logger.info('OAuth redirect URI:', { redirect_uri: correctRedirectUri });
                 authUrl.searchParams.append('response_type', 'code');
                 authUrl.searchParams.append('scope', 'snapchat-marketing-api');
                 authUrl.searchParams.append('state', this.generateState());
@@ -135,7 +140,9 @@ class AuthController {
                 code: code,
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
-                redirect_uri: REDIRECT_URI
+                redirect_uri: REDIRECT_URI.includes('/api/auth/callback')
+                    ? REDIRECT_URI
+                    : REDIRECT_URI.replace('/auth/callback', '/api/auth/callback')
             });
             const response = await fetch(tokenUrl, {
                 method: 'POST',
