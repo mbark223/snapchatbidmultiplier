@@ -74,62 +74,7 @@ window.toggleDropdown = function(dropdownId) {
     });
 };
 
-window.toggleSelection = function(type, code, isChecked) {
-    const multiplierInput = document.getElementById(`${type}-${code}-multiplier`);
-    const multiplier = parseFloat(multiplierInput.value) || 1.0;
-    
-    if (isChecked) {
-        selectedItems[type][code] = multiplier;
-    } else {
-        delete selectedItems[type][code];
-    }
-    
-    updateSelectedDisplay(type);
-};
-
-window.filterOptions = function(type) {
-    const searchInput = document.querySelector(`#${type}-dropdown .search-input`);
-    const searchTerm = searchInput.value.toLowerCase();
-    const options = document.querySelectorAll(`#${type}-options .option-item`);
-    
-    options.forEach(option => {
-        const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-    });
-};
-
-window.selectAll = function(type) {
-    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-        window.toggleSelection(type, checkbox.value, true);
-    });
-};
-
-window.deselectAll = function(type) {
-    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        window.toggleSelection(type, checkbox.value, false);
-    });
-};
-
-window.updateMultiplier = function(type, code, value) {
-    const checkbox = document.querySelector(`input[type="checkbox"][value="${code}"]`);
-    if (checkbox && checkbox.checked) {
-        selectedItems[type][code] = parseFloat(value) || 1.0;
-        updateSelectedDisplay(type);
-    }
-};
-
-window.removeSelection = function(type, code) {
-    delete selectedItems[type][code];
-    const checkbox = document.querySelector(`#${type}-options input[type="checkbox"][value="${code}"]`);
-    if (checkbox) {
-        checkbox.checked = false;
-    }
-    updateSelectedDisplay(type);
-};
+// All window.* functions are defined later in the file after the actual function implementations
 
 // Helper function needed by the above functions
 function updateSelectedDisplay(type) {
