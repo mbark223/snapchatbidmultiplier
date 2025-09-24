@@ -825,17 +825,8 @@ function testAuthentication() {
     const accessToken = document.getElementById('accessToken').value;
     
     if (!accessToken) {
-        alert('Please enter an access token first. Note: You must use a token obtained through the OAuth flow (use the "Connect with Snapchat" button), not a raw JWT token.');
+        alert('Please enter your Snapchat access token first.\n\nThis should be a valid Snapchat API access token, not a JWT token.');
         return;
-    }
-    
-    // Check if this looks like a JWT token (starts with eyJ)
-    if (accessToken.startsWith('eyJ')) {
-        const isOAuthToken = TokenManager.hasValidToken();
-        if (!isOAuthToken) {
-            alert('Warning: You appear to be using a raw JWT token. For testing Snapchat API calls, you need to:\n\n1. Click "Connect with Snapchat" button\n2. Complete the OAuth flow\n3. The token will be automatically filled\n\nThe Test Auth button tests actual Snapchat API calls, not just JWT validation.');
-            return;
-        }
     }
     
     const apiUrl = window.location.origin;
@@ -946,13 +937,10 @@ function initializeOAuth() {
     // Update UI based on auth status
     updateAuthUI();
     
-    // Set up login link
+    // OAuth is not configured, so hide login link
     const loginLink = document.getElementById('oauthLoginLink');
     if (loginLink) {
-        loginLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            initiateOAuthFlow();
-        });
+        loginLink.style.display = 'none';
     }
     
     // Set up logout link
