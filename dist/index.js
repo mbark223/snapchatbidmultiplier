@@ -252,6 +252,19 @@ app.post('/debug/test-snapchat-direct', async (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Debug endpoint for environment variables
+app.get('/debug/env', (_req, res) => {
+    res.json({
+        has_client_id: !!process.env.SNAPCHAT_CLIENT_ID,
+        has_client_secret: !!process.env.SNAPCHAT_CLIENT_SECRET,
+        has_redirect_uri: !!process.env.SNAPCHAT_REDIRECT_URI,
+        has_jwt_secret: !!process.env.JWT_SECRET,
+        redirect_uri_value: process.env.SNAPCHAT_REDIRECT_URI || 'NOT SET',
+        node_env: process.env.NODE_ENV,
+        vercel: process.env.VERCEL,
+        timestamp: new Date().toISOString()
+    });
+});
 // Serve index.html for root route
 app.get('/', (_req, res) => {
     res.sendFile(path_1.default.join(publicPath, 'index.html'));

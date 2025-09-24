@@ -14,6 +14,12 @@ class AuthController {
                 const CLIENT_ID = process.env.SNAPCHAT_CLIENT_ID;
                 const REDIRECT_URI = process.env.SNAPCHAT_REDIRECT_URI;
                 if (!CLIENT_ID || !REDIRECT_URI) {
+                    logger_1.logger.error('OAuth config missing', {
+                        has_client_id: !!CLIENT_ID,
+                        has_redirect_uri: !!REDIRECT_URI,
+                        client_id_length: CLIENT_ID?.length || 0,
+                        env_keys: Object.keys(process.env).filter(k => k.includes('SNAP'))
+                    });
                     throw new errorHandler_1.APIError('OAuth configuration missing. Please set SNAPCHAT_CLIENT_ID and SNAPCHAT_REDIRECT_URI environment variables.', 500);
                 }
                 const authUrl = new URL('https://accounts.snapchat.com/login/oauth2/authorize');
