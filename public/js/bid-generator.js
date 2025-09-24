@@ -209,26 +209,38 @@ function generateCode() {
 }
 
 function generateCurlCode(adSquadId, accessToken, requestBody) {
-    const apiUrl = window.location.origin;
-    const curl = `curl -X PUT '${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers' \\
+    // Convert to Snapchat API format
+    const snapchatRequestBody = {
+        adsquad: {
+            bid_multiplier_properties: requestBody.bid_multiplier_properties
+        }
+    };
+    
+    const curl = `curl -X PUT 'https://adsapi.snapchat.com/v1/adsquads/${adSquadId}' \\
   -H 'Authorization: Bearer ${accessToken}' \\
   -H 'Content-Type: application/json' \\
-  -d '${JSON.stringify(requestBody, null, 2)}'`;
+  -d '${JSON.stringify(snapchatRequestBody, null, 2)}'`;
     
     document.getElementById('curlCode').textContent = curl;
 }
 
 function generateJavaScriptCode(adSquadId, accessToken, requestBody) {
-    const apiUrl = window.location.origin;
-    const jsCode = `// Using Fetch API
+    // Convert to Snapchat API format
+    const snapchatRequestBody = {
+        adsquad: {
+            bid_multiplier_properties: requestBody.bid_multiplier_properties
+        }
+    };
+    
+    const jsCode = `// Using Fetch API - Direct Snapchat API call
 const updateBidMultipliers = async () => {
-  const response = await fetch('${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers', {
+  const response = await fetch('https://adsapi.snapchat.com/v1/adsquads/${adSquadId}', {
     method: 'PUT',
     headers: {
       'Authorization': 'Bearer ${accessToken}',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(${JSON.stringify(requestBody, null, 2).split('\n').join('\n  ')})
+    body: JSON.stringify(${JSON.stringify(snapchatRequestBody, null, 2).split('\n').join('\n  ')})
   });
   
   const result = await response.json();
@@ -242,12 +254,18 @@ updateBidMultipliers();`;
 }
 
 function generatePythonCode(adSquadId, accessToken, requestBody) {
-    const apiUrl = window.location.origin;
+    // Convert to Snapchat API format
+    const snapchatRequestBody = {
+        adsquad: {
+            bid_multiplier_properties: requestBody.bid_multiplier_properties
+        }
+    };
+    
     const pythonCode = `import requests
 import json
 
-# API endpoint
-url = f"${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers"
+# Direct Snapchat API endpoint
+url = f"https://adsapi.snapchat.com/v1/adsquads/${adSquadId}"
 
 # Headers
 headers = {
@@ -255,8 +273,8 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# Request body
-data = ${JSON.stringify(requestBody, null, 2).split('\n').join('\n    ')}
+# Request body with Snapchat API format
+data = ${JSON.stringify(snapchatRequestBody, null, 2).split('\n').join('\n    ')}
 
 # Make the request
 response = requests.put(url, headers=headers, json=data)
@@ -273,7 +291,13 @@ else:
 }
 
 function generateRawJSON(requestBody) {
-    document.getElementById('rawCode').textContent = JSON.stringify(requestBody, null, 2);
+    // Convert to Snapchat API format
+    const snapchatRequestBody = {
+        adsquad: {
+            bid_multiplier_properties: requestBody.bid_multiplier_properties
+        }
+    };
+    document.getElementById('rawCode').textContent = JSON.stringify(snapchatRequestBody, null, 2);
 }
 
 function showTab(tabName) {
