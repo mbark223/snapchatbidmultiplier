@@ -111,9 +111,7 @@ class SnapchatAPIService {
     async updateAdSquadBidMultipliers(adSquadId, bidMultiplierProperties) {
         const response = await this.client.put(`/adsquads/${adSquadId}`, {
             adsquad: {
-                brand_safety_config: {
-                    bid_multiplier_properties: bidMultiplierProperties
-                }
+                bid_multiplier_properties: bidMultiplierProperties
             }
         });
         return response.data.adsquad;
@@ -121,9 +119,7 @@ class SnapchatAPIService {
     async batchUpdateAdSquads(updates) {
         const adsquads = updates.map(update => ({
             adsquad_id: update.adsquad_id,
-            brand_safety_config: {
-                bid_multiplier_properties: update.bid_multiplier_properties
-            }
+            bid_multiplier_properties: update.bid_multiplier_properties
         }));
         const response = await this.client.put('/adsquads/batch', { adsquads });
         return response.data.adsquads;
