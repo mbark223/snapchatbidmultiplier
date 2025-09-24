@@ -994,11 +994,17 @@ function updateAuthUI() {
 }
 
 function initiateOAuthFlow() {
+    console.log('Initiating OAuth flow...');
     // First, check if OAuth is configured
     fetch('/api/auth/login')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('OAuth response:', data);
             if (data.auth_url) {
+                console.log('Redirecting to:', data.auth_url);
                 // Redirect to Snapchat OAuth
                 window.location.href = data.auth_url;
             } else {
@@ -1007,7 +1013,7 @@ function initiateOAuthFlow() {
         })
         .catch(error => {
             console.error('OAuth error:', error);
-            alert('Unable to start OAuth flow. Please use Option 1 with your access token.');
+            alert('Unable to start OAuth flow. Error: ' + error.message);
         });
 }
 
