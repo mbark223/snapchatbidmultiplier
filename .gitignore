@@ -65,3 +65,7 @@ Desktop.ini
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Snapchat OAuth credentials and tokens
+.snapchat-oauth-config
+.snapchat-tokens
