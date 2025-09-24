@@ -4,6 +4,10 @@
   "outputDirectory": ".",
   "rewrites": [
     {
+      "source": "/api/test-env",
+      "destination": "/api/test-env"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api"
     },
@@ -16,6 +20,9 @@
     "api/index.js": {
       "maxDuration": 30,
       "includeFiles": "public/**"
+    },
+    "api/test-env.js": {
+      "maxDuration": 10
     }
   }
 }
