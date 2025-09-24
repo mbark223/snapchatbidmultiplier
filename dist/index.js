@@ -96,7 +96,7 @@ app.get('/debug/test-snapchat', auth_1.authenticate, async (req, res) => {
     const axios = require('axios');
     const token = req.user?.access_token;
     if (!token) {
-        return res.status(400).json({ error: 'No access token found' });
+        return res.status(400).json({ error: 'No access token found. Make sure you completed the OAuth flow or are using a valid Snapchat access token.' });
     }
     const results = {};
     // Test 1: Try to fetch user's ad accounts
@@ -168,6 +168,87 @@ app.get('/debug/test-snapchat', auth_1.authenticate, async (req, res) => {
     return res.json({
         success: results.adAccounts?.success || results.adSquad?.success || results.userInfo?.success,
         results,
+        timestamp: new Date().toISOString()
+    });
+});
+// Test endpoint for direct Snapchat access tokens (for testing only)
+app.post('/debug/test-snapchat-direct', async (req, res) => {
+    const axios = require('axios');
+    const { access_token, ad_squad_id } = req.body;
+    if (!access_token) {
+        return res.status(400).json({ error: 'Please provide access_token in request body' });
+    }
+    const results = {};
+    // Test 1: Try to fetch user info
+    try {
+        const response = await axios.get('https://adsapi.snapchat.com/v1/me', {
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        results.userInfo = {
+            success: true,
+            data: response.data.me
+        };
+    }
+    catch (error) {
+        results.userInfo = {
+            success: false,
+            error: error.response?.data || error.message,
+            status: error.response?.status
+        };
+    }
+    // Test 2: Try to fetch ad accounts
+    try {
+        const response = await axios.get('https://adsapi.snapchat.com/v1/me/adaccounts', {
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        results.adAccounts = {
+            success: true,
+            count: response.data.adaccounts?.length || 0
+        };
+    }
+    catch (error) {
+        results.adAccounts = {
+            success: false,
+            error: error.response?.data || error.message,
+            status: error.response?.status
+        };
+    }
+    // Test 3: Try to fetch specific ad squad if provided
+    if (ad_squad_id) {
+        try {
+            const response = await axios.get(`https://adsapi.snapchat.com/v1/adsquads/${ad_squad_id}`, {
+                headers: {
+                    'Authorization': `Bearer ${access_token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            results.adSquad = {
+                success: true,
+                data: {
+                    name: response.data.adsquads?.[0]?.adsquad?.name,
+                    status: response.data.adsquads?.[0]?.adsquad?.status,
+                    has_bid_multipliers: !!response.data.adsquads?.[0]?.adsquad?.bid_multiplier_properties
+                }
+            };
+        }
+        catch (error) {
+            results.adSquad = {
+                success: false,
+                error: error.response?.data || error.message,
+                status: error.response?.status
+            };
+        }
+    }
+    return res.json({
+        success: results.userInfo?.success || results.adAccounts?.success || results.adSquad?.success,
+        results,
+        note: 'This is a test endpoint for direct Snapchat access tokens',
         timestamp: new Date().toISOString()
     });
 });
