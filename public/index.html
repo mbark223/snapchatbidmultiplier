@@ -373,12 +373,14 @@
         </div>
 
         <div class="input-group">
-            <label for="accessToken">Snapchat Access Token</label>
-            <input type="text" id="accessToken" placeholder="Enter your Snapchat API Access Token">
+            <label for="accessToken">Snapchat Marketing API Access Token</label>
+            <input type="text" id="accessToken" placeholder="Enter your Snapchat Marketing API Access Token">
             <small style="color: #666; display: block; margin-top: 5px; line-height: 1.4;">
-                ℹ️ <strong>How to use this tool:</strong><br>
-                Enter your Snapchat API access token (not a JWT token). This token should be obtained from Snapchat's API.<br>
-                <span style="color: #f57c00;">⚠️ Note: OAuth is not configured on this server. Please use your own Snapchat access token.</span>
+                ℹ️ <strong>Important:</strong><br>
+                You need a <strong>Marketing API OAuth access token</strong>, NOT a Conversions API token.<br>
+                <span style="color: #d32f2f;">❌ Conversions API tokens (like WFIZTM0ZS...) will NOT work</span><br>
+                <span style="color: #388e3c;">✅ You need an OAuth access token from the Marketing API</span><br>
+                <span style="color: #f57c00;">⚠️ OAuth is not configured on this server. You must provide your own Marketing API token.</span>
                 <span id="authStatus" style="display: none; color: #4caf50;">
                     ✓ Token entered 
                     <a href="#" id="logoutLink" style="color: #f44336; text-decoration: underline; margin-left: 10px;">Clear</a>

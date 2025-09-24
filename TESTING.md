@@ -1,13 +1,36 @@
 # Testing with Direct Snapchat Access Tokens
 
-Since OAuth is not configured on this server, you'll need to use a direct Snapchat access token.
+Since OAuth is not configured on this server, you'll need to use a direct Snapchat Marketing API access token.
 
-## Getting a Snapchat Access Token
+## Important: Token Types
 
-You'll need a valid Snapchat Marketing API access token. This can be obtained through:
-1. Snapchat's Marketing API documentation
-2. Using Snapchat's API testing tools
-3. Your existing Snapchat app integration
+### ❌ Conversions API Tokens (Will NOT Work)
+- Found in Ads Manager → Conversions API Tokens
+- Look like: `WFIZTM0ZS1iY2U1LTQ0ZDEtOTRjOC0zNGI1MDBlMmNiZWMifQ...`
+- Used for server-to-server event tracking
+- **These tokens CANNOT access the Marketing API**
+
+### ✅ Marketing API OAuth Tokens (Required)
+- Obtained through OAuth flow with Snapchat
+- Shorter format, different structure
+- Has access to Marketing API endpoints
+
+## Getting a Marketing API Access Token
+
+You'll need a valid Snapchat Marketing API OAuth access token. This can be obtained through:
+
+1. **Snapchat Business Manager**:
+   - Go to business.snapchat.com
+   - Create an app under "Apps"
+   - Use the OAuth flow to get an access token
+
+2. **Snapchat API Explorer**:
+   - Use Snapchat's API testing tools
+   - Generate a temporary access token for testing
+
+3. **Existing OAuth Integration**:
+   - If you have an existing app with OAuth setup
+   - Use the access token from that integration
 
 ## Testing Authentication
 

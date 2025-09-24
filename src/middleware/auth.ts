@@ -60,6 +60,7 @@ export const authenticate = async (
     
     // Assume it's a Snapchat access token
     // Snapchat tokens can have various formats, so we'll be less restrictive
+    // Snapchat Conversions API tokens typically start with patterns like WFIZTM0ZS...
     if (token.length > 20) {
       req.user = {
         id: 'direct_user',
@@ -67,7 +68,11 @@ export const authenticate = async (
         access_token: token
       };
       
-      logger.info('Authenticated via direct Snapchat token', { tokenLength: token.length });
+      logger.info('Authenticated via direct Snapchat token', { 
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 10),
+        tokenPattern: token.match(/^[A-Za-z0-9]+$/) ? 'alphanumeric' : 'mixed'
+      });
       return next();
     }
 

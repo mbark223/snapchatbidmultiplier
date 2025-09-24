@@ -825,7 +825,13 @@ function testAuthentication() {
     const accessToken = document.getElementById('accessToken').value;
     
     if (!accessToken) {
-        alert('Please enter your Snapchat access token first.\n\nThis should be a valid Snapchat API access token, not a JWT token.');
+        alert('Please enter your Snapchat Marketing API access token first.\n\nThis should be an OAuth access token from the Marketing API, not a Conversions API token.');
+        return;
+    }
+    
+    // Check if this looks like a Conversions API token
+    if (accessToken.match(/^[A-Z0-9]{50,}$/)) {
+        alert('❌ This appears to be a Conversions API token!\n\nConversions API tokens (from the "Conversions API Tokens" section) are for event tracking, not for the Marketing API.\n\nYou need an OAuth access token from the Marketing API instead.\n\nTo get a Marketing API token:\n1. Create a Snapchat app at business.snapchat.com\n2. Use the OAuth flow to get an access token\n3. Or use Snapchat\'s API testing tools');
         return;
     }
     
