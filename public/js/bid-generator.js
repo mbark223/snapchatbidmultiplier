@@ -696,17 +696,31 @@ function executeAPICall() {
         return;
     }
 
-    const { adSquadId, accessToken, requestBody } = lastGeneratedRequest;
-    const apiUrl = window.location.origin;
     const responseDiv = document.getElementById('apiResponse');
     
-    // Show loading state
+    // Show informational message about using the generated code
     responseDiv.style.display = 'block';
     responseDiv.style.background = '#e3f2fd';
     responseDiv.style.border = '1px solid #2196f3';
     responseDiv.style.color = '#1565c0';
-    responseDiv.innerHTML = '⏳ Executing API call...';
+    responseDiv.innerHTML = `
+        <strong>ℹ️ How to Execute the API Call:</strong><br><br>
+        The code above shows direct Snapchat API calls. To execute:<br><br>
+        <strong>Option 1 - Using curl (recommended):</strong><br>
+        1. Copy the curl command from the "cURL" tab above<br>
+        2. Open your terminal/command prompt<br>
+        3. Paste and run the command<br><br>
+        <strong>Option 2 - Using the code samples:</strong><br>
+        1. Copy the JavaScript or Python code<br>
+        2. Save it to a file and run it<br><br>
+        <strong>Note:</strong> These are direct Snapchat API calls that update your ad squad's bid multipliers immediately.
+    `;
+    return;
     
+    // The code below is the original intermediary API call - commented out since we're now showing direct Snapchat API calls
+    /*
+    const { adSquadId, accessToken, requestBody } = lastGeneratedRequest;
+    const apiUrl = window.location.origin;
     fetch(`${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers`, {
         method: 'PUT',
         headers: {
@@ -1040,6 +1054,8 @@ function logout() {
 }
 
 // Update executeAPICall to use OAuth token if available
+// Commented out since we're now showing direct Snapchat API calls
+/*
 const originalExecuteAPICall = executeAPICall;
 executeAPICall = function() {
     if (!lastGeneratedRequest) {
@@ -1136,3 +1152,4 @@ executeAPICall = function() {
         `;
     });
 };
+*/
