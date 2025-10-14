@@ -14,7 +14,10 @@ const authenticate = async (req, _res, next) => {
             logger_1.logger.warn('No authorization header provided');
             return next(new errorHandler_1.APIError('No authorization token provided', 401));
         }
-        const token = authHeader.replace('Bearer ', '');
+        let token = authHeader.replace('Bearer ', '').trim();
+        if (token.toLowerCase().startsWith('bearer ')) {
+            token = token.slice(7).trim();
+        }
         if (!token) {
             logger_1.logger.warn('Empty token after removing Bearer prefix');
             return next(new errorHandler_1.APIError('No authorization token provided', 401));

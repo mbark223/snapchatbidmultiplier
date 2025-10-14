@@ -12,7 +12,7 @@ class SnapchatAPIService {
         this.handleError = (error) => {
             if (error.response) {
                 const { status, data, headers } = error.response;
-                // Enhanced error logging for 401 errors
+                // Enhanced error logging
                 if (status === 401) {
                     logger_1.logger.error('Authentication failed with Snapchat API', {
                         status,
@@ -26,7 +26,13 @@ class SnapchatAPIService {
                     });
                 }
                 else {
-                    logger_1.logger.error('Snapchat API Error', { status, data });
+                    logger_1.logger.error('Snapchat API Error', {
+                        status,
+                        data,
+                        contentType: headers?.['content-type'],
+                        isHTML: typeof data === 'string' && data.includes('<!DOCTYPE'),
+                        dataPreview: typeof data === 'string' ? data.substring(0, 200) : JSON.stringify(data).substring(0, 200)
+                    });
                 }
                 // Extract error message from various possible formats
                 let errorMessage = 'Snapchat API Error';
@@ -56,16 +62,24 @@ class SnapchatAPIService {
             throw new errorHandler_1.APIError(`Network error: ${error.message}`, 500);
         };
         const baseURL = process.env.SNAPCHAT_API_BASE_URL || 'https://adsapi.snapchat.com/v1';
+        const clientId = process.env.SNAPCHAT_CLIENT_ID;
+        if (!clientId) {
+            logger_1.logger.warn('SNAPCHAT_CLIENT_ID is not configured; Snapchat API calls will fail', {
+                hasClientId: !!clientId
+            });
+        }
         logger_1.logger.info('Initializing Snapchat API client', {
             baseURL,
             hasToken: !!accessToken,
-            tokenLength: accessToken?.length
+            tokenLength: accessToken?.length,
+            hasClientId: !!clientId
         });
         this.client = axios_1.default.create({
             baseURL,
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(clientId ? { 'X-Snapchat-Client-Id': clientId } : {})
             },
             timeout: 30000
         });
@@ -123,6 +137,11 @@ class SnapchatAPIService {
         }));
         const response = await this.client.put('/adsquads/batch', { adsquads });
         return response.data.adsquads;
+    }
+    async testConnection() {
+        // Snapchat doesn't have a /me endpoint, let's try to get organizations
+        const response = await this.client.get('/organizations');
+        return response.data;
     }
 }
 exports.SnapchatAPIService = SnapchatAPIService;

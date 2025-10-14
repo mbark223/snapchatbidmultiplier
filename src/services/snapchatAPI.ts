@@ -8,18 +8,27 @@ export class SnapchatAPIService {
 
   constructor(accessToken: string) {
     const baseURL = process.env.SNAPCHAT_API_BASE_URL || 'https://adsapi.snapchat.com/v1';
+    const clientId = process.env.SNAPCHAT_CLIENT_ID;
+    
+    if (!clientId) {
+      logger.warn('SNAPCHAT_CLIENT_ID is not configured; Snapchat API calls will fail', {
+        hasClientId: !!clientId
+      });
+    }
     
     logger.info('Initializing Snapchat API client', { 
       baseURL,
       hasToken: !!accessToken,
-      tokenLength: accessToken?.length 
+      tokenLength: accessToken?.length,
+      hasClientId: !!clientId
     });
     
     this.client = axios.create({
       baseURL,
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(clientId ? { 'X-Snapchat-Client-Id': clientId } : {})
       },
       timeout: 30000
     });
@@ -60,7 +69,7 @@ export class SnapchatAPIService {
     if (error.response) {
       const { status, data, headers } = error.response;
       
-      // Enhanced error logging for 401 errors
+      // Enhanced error logging
       if (status === 401) {
         logger.error('Authentication failed with Snapchat API', { 
           status, 
@@ -73,7 +82,13 @@ export class SnapchatAPIService {
             (error.config.headers.Authorization as string).substring(0, 30) + '...' : 'none'
         });
       } else {
-        logger.error('Snapchat API Error', { status, data });
+        logger.error('Snapchat API Error', { 
+          status, 
+          data,
+          contentType: headers?.['content-type'],
+          isHTML: typeof data === 'string' && data.includes('<!DOCTYPE'),
+          dataPreview: typeof data === 'string' ? data.substring(0, 200) : JSON.stringify(data).substring(0, 200)
+        });
       }
       
       // Extract error message from various possible formats
@@ -146,5 +161,11 @@ export class SnapchatAPIService {
 
     const response = await this.client.put('/adsquads/batch', { adsquads });
     return response.data.adsquads;
+  }
+
+  async testConnection(): Promise<any> {
+    // Snapchat doesn't have a /me endpoint, let's try to get organizations
+    const response = await this.client.get('/organizations');
+    return response.data;
   }
 }

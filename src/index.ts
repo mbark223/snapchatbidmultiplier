@@ -17,6 +17,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ensure Express respects X-Forwarded-* headers behind proxies (Vercel, etc.)
+app.set('trust proxy', 1);
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -96,6 +99,101 @@ app.get('/debug/test-config', (_req, res) => {
       nodeEnv: process.env.NODE_ENV || 'development'
     }
   });
+});
+
+// Test Snapchat API connection
+app.get('/debug/test-snapchat', authenticate, async (req: any, res) => {
+  try {
+    const { SnapchatAPIService } = await import('./services/snapchatAPI');
+    const snapchatAPI = new SnapchatAPIService(req.user.access_token);
+    
+    // Try to get user info from Snapchat
+    const response = await snapchatAPI.testConnection();
+    
+    res.json({
+      success: true,
+      message: 'Successfully connected to Snapchat API',
+      data: response.data
+    });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      success: false,
+      message: 'Failed to connect to Snapchat API',
+      error: error.response?.data || error.message,
+      status: error.response?.status
+    });
+  }
+});
+
+// Test with custom URL
+app.post('/debug/test-url', authenticate, async (req: any, res) => {
+  try {
+    const { url } = req.body;
+    const axios = (await import('axios')).default;
+    
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': `Bearer ${req.user.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: response.data,
+      headers: response.headers
+    });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data || error.message,
+      status: error.response?.status,
+      contentType: error.response?.headers?.['content-type'],
+      isHTML: typeof error.response?.data === 'string' && error.response?.data.includes('<!DOCTYPE')
+    });
+  }
+});
+
+// Test specific ad squad
+app.get('/debug/test-adsquad/:id', authenticate, async (req: any, res) => {
+  try {
+    const { SnapchatAPIService } = await import('./services/snapchatAPI');
+    const snapchatAPI = new SnapchatAPIService(req.user.access_token);
+    
+    logger.info('Testing ad squad fetch', { 
+      adSquadId: req.params.id,
+      tokenLength: req.user.access_token.length,
+      tokenPreview: req.user.access_token.substring(0, 20) + '...'
+    });
+    
+    const adSquad = await snapchatAPI.getAdSquad(req.params.id);
+    
+    res.json({
+      success: true,
+      message: 'Successfully fetched ad squad',
+      data: adSquad
+    });
+  } catch (error: any) {
+    logger.error('Ad squad fetch failed', {
+      error: error.response?.data || error.message,
+      status: error.response?.status,
+      adSquadId: req.params.id
+    });
+    
+    res.status(error.response?.status || 500).json({
+      success: false,
+      message: 'Failed to fetch ad squad from Snapchat',
+      error: error.response?.data || error.message,
+      status: error.response?.status,
+      details: {
+        adSquadId: req.params.id,
+        errorType: error.response?.data?.error_code || 'unknown',
+        suggestion: error.response?.status === 404 ? 
+          'Ad Squad ID not found. Please verify the ID is correct and belongs to your account.' : 
+          'Please check your access token has permissions for this ad account.'
+      }
+    });
+  }
 });
 
 // Test direct Snapchat API connection

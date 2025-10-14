@@ -24,7 +24,10 @@ export const authenticate = async (
       return next(new APIError('No authorization token provided', 401));
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    let token = authHeader.replace('Bearer ', '').trim();
+    if (token.toLowerCase().startsWith('bearer ')) {
+      token = token.slice(7).trim();
+    }
     
     if (!token) {
       logger.warn('Empty token after removing Bearer prefix');
