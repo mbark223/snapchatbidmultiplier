@@ -88,7 +88,7 @@ class ValidationService {
 }
 exports.ValidationService = ValidationService;
 ValidationService.MIN_MULTIPLIER = 0.1;
-ValidationService.MAX_MULTIPLIER = 10.0;
+ValidationService.MAX_MULTIPLIER = 1.0;
 ValidationService.VALID_STATES = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
     'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',

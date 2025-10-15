@@ -69,3 +69,4 @@ Desktop.ini
 # Snapchat OAuth credentials and tokens
 .snapchat-oauth-config
 .snapchat-tokens
+.vercel

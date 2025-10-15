@@ -6,7 +6,7 @@ import {
 
 export class ValidationService {
   private static readonly MIN_MULTIPLIER = 0.1;
-  private static readonly MAX_MULTIPLIER = 10.0;
+  private static readonly MAX_MULTIPLIER = 1.0;
   private static readonly VALID_STATES = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
     'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',

@@ -373,24 +373,20 @@
         </div>
 
         <div class="input-group">
-            <label for="accessToken">Snapchat Marketing API Access Token</label>
-            <input type="text" id="accessToken" placeholder="Enter your Snapchat Marketing API Access Token">
-            <small style="color: #666; display: block; margin-top: 5px; line-height: 1.4;">
-                ℹ️ <strong>Important:</strong><br>
-                You need a <strong>Marketing API OAuth access token</strong>, NOT a Conversions API token.<br>
-                <span style="color: #d32f2f;">❌ Conversions API tokens (like WFIZTM0ZS...) will NOT work</span><br>
-                <span style="color: #388e3c;">✅ You need an OAuth access token from the Marketing API</span><br>
-                <br>
-                <strong style="color: #1976d2;">How to get your token:</strong><br>
-                1. Use the manual script: <code>./get-token-manual.sh</code><br>
-                2. Or get a token from your existing Snapchat integration<br>
-                3. Paste the token above and click "Generate Code"
-                <span id="authStatus" style="display: none; color: #4caf50;">
-                    ✓ Token entered 
-                    <a href="#" id="logoutLink" style="color: #f44336; text-decoration: underline; margin-left: 10px;">Clear</a>
+            <label for="oauthLoginBtn">Snapchat OAuth Access</label>
+            <button id="oauthLoginBtn" type="button" style="margin-bottom: 10px;">Log in with Snapchat</button>
+            <small style="color: #666; display: block; margin-bottom: 10px; line-height: 1.4;">
+                You will be redirected to <code>https://accounts.snapchat.com/login/oauth2/authorize</code> to grant Marketing API access.
+                After approving, you will return here and your token will be captured automatically.
+                <span id="authStatus" style="display: none; color: #4caf50; margin-left: 8px;">
+                    ✓ Connected 
+                    <a href="#" id="logoutLink" style="color: #f44336; text-decoration: underline; margin-left: 8px;">Log out</a>
                 </span>
             </small>
-            <!-- OAuth button removed - use direct token instead -->
+            <input type="text" id="accessToken" placeholder="Optional: paste an existing Marketing API access token" autocomplete="off">
+            <small style="color: #666; display: block; margin-top: 5px; line-height: 1.4;">
+                Use manual entry only if Snapchat provided a token directly (Marketing API OAuth tokens only).
+            </small>
         </div>
 
         <div class="input-group">

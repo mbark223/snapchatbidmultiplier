@@ -157,14 +157,14 @@ Authorization: Bearer {token}
       "bid_multiplier_properties": {
         "variables": ["GENDER", "AGE", "US_STATE", "DMA"],
         "bid_multiplier_map": {
-          "male": 1.2,
-          "female": 0.8,
-          "18-24": 1.5,
-          "25-34": 1.0,
-          "CA": 0.9,
-          "NY": 1.3,
-          "DMA_501": 1.1,
-          "DMA_803": 0.85
+      "male": 1.0,
+      "female": 0.85,
+      "18-24": 1.0,
+      "25-34": 0.95,
+      "CA": 0.9,
+      "NY": 0.8,
+      "DMA_501": 0.95,
+      "DMA_803": 0.85
         },
         "default": 1.0
       }
@@ -176,7 +176,7 @@ Authorization: Bearer {token}
 
 ## Validation Rules
 
-- Multiplier values must be between 0.1 and 10.0
+- Multiplier values must be between 0.1 and 1.0
 - Gender values: `male`, `female`, `unknown`
 - Age ranges: `13-17`, `18-24`, `25-34`, `35-44`, `45-54`, `55-64`, `65+`
 - State codes: Valid US state abbreviations (e.g., `CA`, `NY`)
@@ -192,8 +192,8 @@ The API returns standardized error responses:
   "errors": [
     {
       "field": "gender.male",
-      "message": "Multiplier must be between 0.1 and 10.0",
-      "value": 15
+      "message": "Multiplier must be between 0.1 and 1.0",
+      "value": 1.2
     }
   ],
   "status": 400,

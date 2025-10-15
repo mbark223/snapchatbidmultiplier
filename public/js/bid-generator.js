@@ -38,8 +38,57 @@ const TokenManager = {
     
     isAuthenticated() {
         return this.getToken() !== null;
+    },
+    
+    getAccessToken() {
+        const jwtToken = this.getToken();
+        if (!jwtToken) return null;
+        
+        const payload = decodeJwtPayload(jwtToken);
+        return payload && typeof payload.access_token === 'string'
+            ? payload.access_token
+            : null;
     }
 };
+
+function decodeJwtPayload(token) {
+    if (!token) return null;
+    
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) {
+            return null;
+        }
+        
+        const base64 = parts[1]
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+        const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+        const decoded = atob(base64 + padding);
+        return JSON.parse(decoded);
+    } catch (error) {
+        console.warn('Failed to decode JWT payload', error);
+        return null;
+    }
+}
+
+function resolveAccessToken() {
+    const oauthToken = TokenManager.getAccessToken();
+    if (oauthToken) {
+        return { token: oauthToken, source: 'oauth' };
+    }
+    
+    const accessTokenInput = document.getElementById('accessToken');
+    const manualToken = accessTokenInput?.value.trim();
+    
+    if (manualToken) {
+        return { token: manualToken, source: 'manual' };
+    }
+    
+    return { token: null, source: null };
+}
+
+let lastGeneratedRequest = null;
 
 // US States data - defined early for global functions
 const usStates = {
@@ -155,42 +204,64 @@ function updateSelectedDisplay(type) {
 
 function generateCode() {
     try {
-        const adSquadId = document.getElementById('adSquadId').value;
-        const accessToken = document.getElementById('accessToken').value;
+        const adSquadIdInput = document.getElementById('adSquadId');
+        const adSquadId = adSquadIdInput ? adSquadIdInput.value.trim() : '';
+        const { token: accessToken, source } = resolveAccessToken();
         const defaultMultiplier = parseFloat(document.getElementById('defaultMultiplier').value) || 1.0;
 
-        if (!adSquadId || !accessToken) {
-            alert('Please enter both Ad Squad ID and Access Token');
+        if (!adSquadId) {
+            alert('Please enter the Ad Squad ID before generating code.');
             return;
         }
 
-    // Build multipliers object
-    const multipliers = {};
+        if (!accessToken) {
+            alert('No Snapchat Marketing API token detected.\n\nClick "Log in with Snapchat" to authorize and capture a token, or paste an existing Marketing API OAuth token manually.');
+            return;
+        }
 
-    // State multipliers from multiselect
-    if (Object.keys(selectedItems.state).length > 0) {
-        multipliers.us_state = { ...selectedItems.state };
-    }
+        // Build multipliers object
+        const multipliers = {};
 
-    // DMA multipliers from multiselect
-    if (Object.keys(selectedItems.dma).length > 0) {
-        multipliers.dma = { ...selectedItems.dma };
-    }
+        // State multipliers from multiselect
+        if (Object.keys(selectedItems.state).length > 0) {
+            multipliers.us_state = { ...selectedItems.state };
+        }
 
-    // Generate request body
-    const requestBody = {
-        multipliers: multipliers,
-        default_multiplier: defaultMultiplier
-    };
+        // DMA multipliers from multiselect
+        if (Object.keys(selectedItems.dma).length > 0) {
+            multipliers.dma = { ...selectedItems.dma };
+        }
 
-    // Generate different code formats
-    generateCurlCode(adSquadId, accessToken, requestBody);
-    generateJavaScriptCode(adSquadId, accessToken, requestBody);
-    generatePythonCode(adSquadId, accessToken, requestBody);
-    generateRawJSON(requestBody);
+        // Generate request body
+        const requestBody = {
+            multipliers: multipliers,
+            default_multiplier: defaultMultiplier
+        };
 
-    // Show output section
-    document.getElementById('outputSection').style.display = 'block';
+        lastGeneratedRequest = { adSquadId, accessToken, requestBody, tokenSource: source };
+
+        const responseDiv = document.getElementById('apiResponse');
+        if (responseDiv) {
+            responseDiv.style.display = 'none';
+        }
+
+        // Generate different code formats
+        generateCurlCode(adSquadId, accessToken, requestBody);
+        generateJavaScriptCode(adSquadId, accessToken, requestBody);
+        generatePythonCode(adSquadId, accessToken, requestBody);
+        generateRawJSON(requestBody);
+
+        // If we used OAuth, keep the token out of the visible input
+        if (source === 'oauth') {
+            const accessTokenInput = document.getElementById('accessToken');
+            if (accessTokenInput) {
+                accessTokenInput.value = '';
+                accessTokenInput.placeholder = 'Token captured via OAuth session';
+            }
+        }
+
+        // Show output section
+        document.getElementById('outputSection').style.display = 'block';
     } catch (error) {
         console.error('Error generating code:', error);
         alert('Error generating code. Check console for details.');
@@ -554,9 +625,9 @@ function createOptionItem(type, code, displayName) {
     const multiplierInput = document.createElement('input');
     multiplierInput.type = 'number';
     multiplierInput.id = `${type}-${code}-multiplier`;
-    multiplierInput.min = '0.5';
-    multiplierInput.max = '10';
-    multiplierInput.step = '0.1';
+    multiplierInput.min = '0.1';
+    multiplierInput.max = '1';
+    multiplierInput.step = '0.05';
     multiplierInput.value = '1.0';
     multiplierInput.addEventListener('change', function() {
         window.updateMultiplier(type, code, this.value);
@@ -682,155 +753,20 @@ window.removeSelection = removeSelection;
 window.filterOptions = filterOptions;
 window.selectAll = selectAll;
 window.deselectAll = deselectAll;
-window.generateCode = generateCode;
-window.clearAll = clearAll;
-window.showTab = showTab;
-window.copyCode = copyCode;
-
-// Store the last generated request data
-let lastGeneratedRequest = null;
-
-// Function to execute the API call
-function executeAPICall() {
-    if (!lastGeneratedRequest) {
-        alert('Please generate API code first');
-        return;
-    }
-
-    const { adSquadId, accessToken, requestBody } = lastGeneratedRequest;
-    const apiUrl = window.location.origin;
-    const responseDiv = document.getElementById('apiResponse');
-    
-    // Show loading state
-    responseDiv.style.display = 'block';
-    responseDiv.style.background = '#e3f2fd';
-    responseDiv.style.border = '1px solid #2196f3';
-    responseDiv.style.color = '#1565c0';
-    responseDiv.innerHTML = '⏳ Executing API call...';
-    
-    fetch(`${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-    })
-    .then(async response => {
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Success
-            responseDiv.style.background = '#e8f5e9';
-            responseDiv.style.border = '1px solid #4caf50';
-            responseDiv.style.color = '#2e7d32';
-            responseDiv.innerHTML = `
-                ✅ <strong>Success!</strong> Bid multipliers updated successfully.<br><br>
-                <strong>Response:</strong><br>
-                <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
-            `;
-        } else {
-            // Error
-            responseDiv.style.background = '#ffebee';
-            responseDiv.style.border = '1px solid #f44336';
-            responseDiv.style.color = '#c62828';
-            
-            let errorMessage = `❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>`;
-            
-            if (response.status === 401 || response.status === 500) {
-                errorMessage += `
-                    <strong>OAuth Not Configured</strong><br>
-                    The "Execute API Call" feature requires OAuth setup which is not currently configured.<br><br>
-                    <strong>Recommended Solution:</strong><br>
-                    1. Copy the generated cURL, JavaScript, or Python code above<br>
-                    2. Run it directly with your Snapchat API access token<br>
-                    3. This will update your bid multipliers successfully<br><br>
-                    <em>Note: The Execute API Call button is for convenience only - the generated code works perfectly!</em><br><br>
-                `;
-            }
-            
-            errorMessage += `<strong>Status:</strong> ${response.status}<br>
-                <strong>Message:</strong> ${data.error || 'Unknown error'}<br>
-                ${data.errors ? `<strong>Validation Errors:</strong><br><pre style="background: #f5f5f5; padding: 10px; border-radius: 3px;">${JSON.stringify(data.errors, null, 2)}</pre>` : ''}
-            `;
-            
-            responseDiv.innerHTML = errorMessage;
-        }
-    })
-    .catch(error => {
-        // Network error
-        responseDiv.style.background = '#ffebee';
-        responseDiv.style.border = '1px solid #f44336';
-        responseDiv.style.color = '#c62828';
-        responseDiv.innerHTML = `
-            ❌ <strong>Network Error!</strong><br><br>
-            <strong>Message:</strong> ${error.message}<br>
-            Please check your connection and try again.
-        `;
-    });
-}
-
-// Update the generateCode function to store the request data
-const originalGenerateCode = window.generateCode;
-window.generateCode = function() {
-    try {
-        const adSquadId = document.getElementById('adSquadId').value;
-        const accessToken = document.getElementById('accessToken').value;
-        const defaultMultiplier = parseFloat(document.getElementById('defaultMultiplier').value) || 1.0;
-
-        if (!adSquadId || !accessToken) {
-            alert('Please enter both Ad Squad ID and Access Token');
-            return;
-        }
-
-        // Build multipliers object
-        const multipliers = {};
-
-        // State multipliers from multiselect
-        if (Object.keys(selectedItems.state).length > 0) {
-            multipliers.us_state = { ...selectedItems.state };
-        }
-
-        // DMA multipliers from multiselect
-        if (Object.keys(selectedItems.dma).length > 0) {
-            multipliers.dma = { ...selectedItems.dma };
-        }
-
-        // Generate request body
-        const requestBody = {
-            multipliers: multipliers,
-            default_multiplier: defaultMultiplier
-        };
-
-        // Store the request data
-        lastGeneratedRequest = { adSquadId, accessToken, requestBody };
-
-        // Call the original generateCode function
-        originalGenerateCode();
-        
-        // Reset the API response display
-        const responseDiv = document.getElementById('apiResponse');
-        responseDiv.style.display = 'none';
-    } catch (error) {
-        console.error('Error in custom generateCode:', error);
-        alert('Error generating code. Check console for details.');
-    }
-};
-
-window.executeAPICall = executeAPICall;
-window.initiateOAuthFlow = initiateOAuthFlow;
-
 // Test authentication function
 function testAuthentication() {
-    const accessToken = document.getElementById('accessToken').value;
+    const { token: accessToken, source } = resolveAccessToken();
+    const jwtToken = TokenManager.getToken();
+    const authHeaderToken = jwtToken || accessToken;
+    const isOAuth = !!jwtToken && source === 'oauth';
     
-    if (!accessToken) {
-        alert('Please enter your Snapchat Marketing API access token first.\n\nThis should be an OAuth access token from the Marketing API, not a Conversions API token.');
+    if (!authHeaderToken) {
+        alert('Authentication required before running the test.\n\nClick "Log in with Snapchat" to authorize and capture a token, or paste a valid Marketing API OAuth token manually.');
         return;
     }
     
     // Check if this looks like a Conversions API token
-    if (accessToken.match(/^[A-Z0-9]{50,}$/)) {
+    if (!isOAuth && accessToken && accessToken.match(/^[A-Z0-9]{50,}$/)) {
         alert('❌ This appears to be a Conversions API token!\n\nConversions API tokens (from the "Conversions API Tokens" section) are for event tracking, not for the Marketing API.\n\nYou need an OAuth access token from the Marketing API instead.\n\nTo get a Marketing API token:\n1. Create a Snapchat app at business.snapchat.com\n2. Use the OAuth flow to get an access token\n3. Or use Snapchat\'s API testing tools');
         return;
     }
@@ -848,7 +784,7 @@ function testAuthentication() {
     // Then test with auth header
     fetch(`${apiUrl}/debug/auth`, {
         headers: {
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${authHeaderToken}`
         }
     })
     .then(response => response.json())
@@ -859,7 +795,7 @@ function testAuthentication() {
         // Now test actual auth middleware
         return fetch(`${apiUrl}/debug/test-auth`, {
             headers: {
-                'Authorization': `Bearer ${accessToken}`
+                'Authorization': `Bearer ${authHeaderToken}`
             }
         });
     })
@@ -877,7 +813,7 @@ function testAuthentication() {
         // Test Snapchat API connection
         return fetch(`${apiUrl}/debug/test-snapchat`, {
             headers: {
-                'Authorization': `Bearer ${accessToken}`
+                'Authorization': `Bearer ${authHeaderToken}`
             }
         });
     })
@@ -943,10 +879,10 @@ function initializeOAuth() {
     // Update UI based on auth status
     updateAuthUI();
     
-    // Set up login link
-    const loginLink = document.getElementById('oauthLoginLink');
-    if (loginLink) {
-        loginLink.addEventListener('click', function(e) {
+    // Set up login button
+    const loginButton = document.getElementById('oauthLoginBtn');
+    if (loginButton) {
+        loginButton.addEventListener('click', function(e) {
             e.preventDefault();
             initiateOAuthFlow();
         });
@@ -969,26 +905,34 @@ function updateAuthUI() {
     const authStatus = document.getElementById('authStatus');
     const accessTokenInput = document.getElementById('accessToken');
     const executeBtn = document.getElementById('executeApiBtn');
+    const loginButton = document.getElementById('oauthLoginBtn');
     
     if (TokenManager.isAuthenticated()) {
         if (authStatus) authStatus.style.display = 'inline';
         if (accessTokenInput) {
-            accessTokenInput.placeholder = 'Using OAuth authentication';
+            accessTokenInput.value = '';
+            accessTokenInput.placeholder = 'Token captured via OAuth session';
             accessTokenInput.disabled = true;
         }
         if (executeBtn) {
             executeBtn.textContent = 'Execute API Call (Authenticated)';
             executeBtn.style.background = '#4caf50';
         }
+        if (loginButton) {
+            loginButton.textContent = 'Re-authenticate with Snapchat';
+        }
     } else {
         if (authStatus) authStatus.style.display = 'none';
         if (accessTokenInput) {
-            accessTokenInput.placeholder = 'Enter your Snapchat API Access Token';
             accessTokenInput.disabled = false;
+            accessTokenInput.placeholder = 'Optional: paste an existing Marketing API token';
         }
         if (executeBtn) {
             executeBtn.textContent = 'Execute API Call';
             executeBtn.style.background = '#27ae60';
+        }
+        if (loginButton) {
+            loginButton.textContent = 'Log in with Snapchat';
         }
     }
 }
@@ -1052,25 +996,27 @@ function logout() {
     }
 }
 
-// Update executeAPICall to use OAuth token if available
-const originalExecuteAPICall = executeAPICall;
-executeAPICall = function() {
+function executeAPICall() {
     if (!lastGeneratedRequest) {
         alert('Please generate API code first');
         return;
     }
 
-    const { adSquadId, accessToken, requestBody } = lastGeneratedRequest;
+    const { adSquadId, accessToken, requestBody, tokenSource } = lastGeneratedRequest;
     const apiUrl = window.location.origin;
     const responseDiv = document.getElementById('apiResponse');
+    if (!responseDiv) {
+        console.error('API response container not found');
+        return;
+    }
     
     // Check if we have an OAuth token
     const jwtToken = TokenManager.getToken();
     const authToken = jwtToken || accessToken;
-    const isOAuth = !!jwtToken;
+    const isOAuth = !!jwtToken && tokenSource === 'oauth';
     
     if (!authToken) {
-        alert('Please either login with Snapchat or enter an access token');
+        alert('Authentication required.\n\nClick "Log in with Snapchat" to authorize and capture a token, or paste a valid Marketing API OAuth token manually.');
         return;
     }
     
@@ -1148,4 +1094,9 @@ executeAPICall = function() {
             <strong>Error:</strong> ${error.message}
         `;
     });
-};
+}
+
+// Expose functions needed by inline handlers or debugging
+window.generateCode = generateCode;
+window.executeAPICall = executeAPICall;
+window.initiateOAuthFlow = initiateOAuthFlow;
