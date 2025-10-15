@@ -1,22 +1,30 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-The TypeScript Express app lives in `src/`: HTTP wiring in `routes/`, request handlers in `controllers/`, business logic in `services/`, plus shared helpers under `utils/` and `middleware/`. DTOs and types centralize in `types/`. Build artifacts land in `dist/`, static assets in `public/`, Vercel uses `api/index.js`, and Jest specs sit in `tests/` with shared setup at `tests/setup.ts`.
+- Source lives under `src/` with HTTP wiring in `routes/`, controllers in `controllers/`, business logic in `services/`, shared helpers in `utils/` and `middleware/`, and common types in `types/`.
+- Transpiled output lands in `dist/`; static assets sit in `public/`; Vercel deploys via `api/index.js`.
+- Jest specs mirror the source tree inside `tests/`; shared mocks and setup belong in `tests/setup.ts`.
 
 ## Build, Test, and Development Commands
-- `npm run dev` runs the API through `ts-node` with Nodemon for local hot reload.
-- `npm run build` emits production JS into `dist/`; `npm start` serves that bundle.
-- `npm test` executes the Jest suite; append `--watch` for rapid cycles.
-- `npm run lint` and `npm run typecheck` gate ESLint and the TypeScript compiler before PRs.
+- `npm run dev` starts the API with `ts-node` and Nodemon for hot reload during local development.
+- `npm run build` compiles TypeScript to `dist/`; follow with `npm start` to serve the production bundle.
+- `npm test` (optionally `npm test -- --watch`) runs Jest; `npm run lint` and `npm run typecheck` gate ESLint and the TypeScript compiler.
 
 ## Coding Style & Naming Conventions
-ESLint (`.eslintrc.json`) is the source of truth: two-space indentation, single quotes, required semicolons. Prefer TypeScript interfaces for request/response shapes and keep file names camel-case to mirror exports (`bidMultiplierService.ts`, `auth.controller.ts`). Avoid `any`; when you must, document the shape and add a narrowing helper in `types/`. Route logs through the shared logger instead of `console` to satisfy lint rules.
+- Follow `.eslintrc.json`: two-space indentation, single quotes, required semicolons, and no unused vars.
+- Prefer TypeScript interfaces for request/response DTOs; keep filenames camel-case to match exports (e.g., `bidMultiplierService.ts`, `auth.controller.ts`).
+- Avoid `any`; if unavoidable, document the expected shape in `types/` and add a narrowing helper.
 
 ## Testing Guidelines
-Tests use Jest with `ts-jest`. Mirror the source path under `tests/` (e.g. `tests/services/bidMultiplierService.spec.ts`) and initialize shared mocks in `tests/setup.ts`. Cover validation, service error paths, and Snapchat API boundaries. Run `npm test` before submitting; when fixing bugs, add a regression spec showing the previous failure.
+- Tests use Jest with `ts-jest`; one spec per module (e.g., `tests/services/bidMultiplierService.spec.ts`).
+- Cover validation branches, error paths, and Snapchat API interactions; add regression tests when fixing bugs.
+- Run `npm test` before submitting and ensure `tests/setup.ts` initializes shared mocks.
 
 ## Commit & Pull Request Guidelines
-Follow the existing conventional tone (`fix:`, `simplify:`, `chore:`) for commit prefixes, keeping the subject under 72 characters and the body reserved for context or rollout notes. Group related changes into a single commit to make history reviewable. PRs should state the problem, the solution, and validation steps (command output, screenshots of the web interface when relevant). Link to tracking issues or tickets, request a reviewer familiar with the touched module, and verify that CI passes before merging.
+- Follow the conventional subject style (`fix:`, `simplify:`, `chore:`) under 72 characters; group related changes per commit.
+- PR descriptions should state the problem, solution, and validation (command output or relevant screenshots); link to tracking issues when available.
+- Verify CI by running `npm run lint`, `npm run typecheck`, and `npm test` locally before requesting review.
 
 ## Environment & Deployment Tips
-Copy `.env.example` to `.env` and supply Snapchat OAuth credentials plus local secrets; keep production values in your secret manager. For Vercel, ensure environment variables exist and rebuild with `npm run build` so `api/index.js` reflects new logic. Scripts like `test-direct-token.sh` and `test-auth.sh` verify tokens against deployed endpoints; use them before deployment PRs. Never commit tokens; track new secret files in `.gitignore`.
+- Copy `.env.example` to `.env` and supply Snapchat OAuth credentials plus local secrets; keep production secrets in the manager.
+- For Vercel, rerun `npm run build` so `api/index.js` reflects new logic; use scripts like `test-direct-token.sh` to verify deployed endpoints.
