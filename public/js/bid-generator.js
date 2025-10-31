@@ -1,17 +1,37 @@
-// Initialize selectedItems immediately
-var selectedItems = {
-    state: {},
-    dma: {}
+// OAuth Configuration Manager
+const OAuthConfig = {
+    CLIENT_ID_KEY: 'snapchat_client_id',
+    CLIENT_SECRET_KEY: 'snapchat_client_secret',
+    REDIRECT_URI_KEY: 'snapchat_redirect_uri',
+    
+    save(clientId, clientSecret, redirectUri) {
+        if (clientId) localStorage.setItem(this.CLIENT_ID_KEY, clientId);
+        if (clientSecret) localStorage.setItem(this.CLIENT_SECRET_KEY, clientSecret);
+        if (redirectUri) localStorage.setItem(this.REDIRECT_URI_KEY, redirectUri);
+    },
+    
+    get() {
+        return {
+            clientId: localStorage.getItem(this.CLIENT_ID_KEY) || '',
+            clientSecret: localStorage.getItem(this.CLIENT_SECRET_KEY) || '',
+            redirectUri: localStorage.getItem(this.REDIRECT_URI_KEY) || 'http://localhost:3000/api/auth/callback'
+        };
+    },
+    
+    clear() {
+        localStorage.removeItem(this.CLIENT_ID_KEY);
+        localStorage.removeItem(this.CLIENT_SECRET_KEY);
+        localStorage.removeItem(this.REDIRECT_URI_KEY);
+    }
 };
 
-// OAuth token management
+// Token Manager
 const TokenManager = {
     TOKEN_KEY: 'snapchat_jwt_token',
     TOKEN_EXPIRY_KEY: 'snapchat_jwt_expiry',
     
     saveToken(token, expiresIn) {
         localStorage.setItem(this.TOKEN_KEY, token);
-        // Calculate expiry time (subtract 5 minutes for safety)
         const expiryTime = Date.now() + ((expiresIn - 300) * 1000);
         localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
     },
@@ -22,7 +42,6 @@ const TokenManager = {
         
         if (!token || !expiry) return null;
         
-        // Check if token is expired
         if (Date.now() > parseInt(expiry)) {
             this.clearToken();
             return null;
@@ -48,9 +67,41 @@ const TokenManager = {
         return payload && typeof payload.access_token === 'string'
             ? payload.access_token
             : null;
+    },
+    
+    getTokenExpiry() {
+        const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
+        return expiry ? new Date(parseInt(expiry)) : null;
     }
 };
 
+// Campaign Manager
+const CampaignManager = {
+    campaigns: [],
+    
+    setCampaigns(campaigns) {
+        this.campaigns = campaigns;
+    },
+    
+    getCampaigns() {
+        return this.campaigns;
+    },
+    
+    updateCampaignMultiplier(campaignId, multiplier) {
+        const campaign = this.campaigns.find(c => c.id === campaignId);
+        if (campaign) {
+            campaign.newMultiplier = multiplier;
+        }
+    },
+    
+    applyBulkMultiplier(multiplier) {
+        this.campaigns.forEach(campaign => {
+            campaign.newMultiplier = multiplier;
+        });
+    }
+};
+
+// Utility functions
 function decodeJwtPayload(token) {
     if (!token) return null;
     
@@ -88,1015 +139,340 @@ function resolveAccessToken() {
     return { token: null, source: null };
 }
 
-let lastGeneratedRequest = null;
-
-// US States data - defined early for global functions
-const usStates = {
-    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
-    'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
-    'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
-    'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
-    'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
-    'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
-    'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
-    'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
-    'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
-    'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
-    'DC': 'District of Columbia'
-};
-window.usStates = usStates;
-
-// DMAs data will be loaded later
-window.dmas = [];
-
-// Immediately expose functions to global scope to support inline handlers
-// This ensures compatibility while the HTML updates propagate
-window.toggleDropdown = function(dropdownId) {
-    const dropdown = document.getElementById(dropdownId);
-    dropdown.classList.toggle('active');
-    
-    // Close other dropdowns
-    document.querySelectorAll('.multiselect-dropdown').forEach(dd => {
-        if (dd.id !== dropdownId) {
-            dd.classList.remove('active');
-        }
-    });
-};
-
-// Removed duplicate - toggleSelection is defined later in the file
-
-window.filterOptions = function(type) {
-    const searchInput = document.querySelector(`#${type}-dropdown .search-input`);
-    const searchTerm = searchInput.value.toLowerCase();
-    const options = document.querySelectorAll(`#${type}-options .option-item`);
-    
-    options.forEach(option => {
-        const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-    });
-};
-
-window.selectAll = function(type) {
-    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-        toggleSelection(type, checkbox.value, true);
-    });
-};
-
-window.deselectAll = function(type) {
-    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        toggleSelection(type, checkbox.value, false);
-    });
-};
-
-window.updateMultiplier = function(type, code, value) {
-    const checkbox = document.querySelector(`input[type="checkbox"][value="${code}"]`);
-    if (checkbox && checkbox.checked) {
-        selectedItems[type][code] = parseFloat(value) || 1.0;
-        updateSelectedDisplay(type);
-    }
-};
-
-window.removeSelection = function(type, code) {
-    delete selectedItems[type][code];
-    const checkbox = document.querySelector(`#${type}-options input[type="checkbox"][value="${code}"]`);
-    if (checkbox) {
-        checkbox.checked = false;
-    }
-    updateSelectedDisplay(type);
-};
-
-// Helper function needed by the above functions
-function updateSelectedDisplay(type) {
-    const container = document.getElementById(`selected-${type}s`);
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    Object.entries(selectedItems[type]).forEach(([code, multiplier]) => {
-        const item = document.createElement('div');
-        item.className = 'selected-item';
-        
-        let displayName = code;
-        if (type === 'state') {
-            const usStates = window.usStates || {};
-            displayName = `${usStates[code] || code} (${code}): ${multiplier}`;
-        } else {
-            const dmas = window.dmas || [];
-            const dma = dmas.find(d => d.code === code);
-            displayName = `${dma ? dma.name : code}: ${multiplier}`;
-        }
-        
-        item.textContent = displayName;
-        const removeSpan = document.createElement('span');
-        removeSpan.className = 'remove';
-        removeSpan.textContent = '×';
-        removeSpan.onclick = function() {
-            window.removeSelection(type, code);
-        };
-        item.appendChild(removeSpan);
-        container.appendChild(item);
-    });
-}
-
-function generateCode() {
-    try {
-        const adSquadIdInput = document.getElementById('adSquadId');
-        const adSquadId = adSquadIdInput ? adSquadIdInput.value.trim() : '';
-        const { token: accessToken, source } = resolveAccessToken();
-        const defaultMultiplier = parseFloat(document.getElementById('defaultMultiplier').value) || 1.0;
-
-        if (!adSquadId) {
-            alert('Please enter the Ad Squad ID before generating code.');
-            return;
-        }
-
-        if (!accessToken) {
-            alert('No Snapchat Marketing API token detected.\n\nClick "Log in with Snapchat" to authorize and capture a token, or paste an existing Marketing API OAuth token manually.');
-            return;
-        }
-
-        // Build multipliers object
-        const multipliers = {};
-
-        // State multipliers from multiselect
-        if (Object.keys(selectedItems.state).length > 0) {
-            multipliers.us_state = { ...selectedItems.state };
-        }
-
-        // DMA multipliers from multiselect
-        if (Object.keys(selectedItems.dma).length > 0) {
-            multipliers.dma = { ...selectedItems.dma };
-        }
-
-        // Generate request body
-        const requestBody = {
-            multipliers: multipliers,
-            default_multiplier: defaultMultiplier
-        };
-
-        lastGeneratedRequest = { adSquadId, accessToken, requestBody, tokenSource: source };
-
-        const responseDiv = document.getElementById('apiResponse');
-        if (responseDiv) {
-            responseDiv.style.display = 'none';
-        }
-
-        // Generate different code formats
-        generateCurlCode(adSquadId, accessToken, requestBody);
-        generateJavaScriptCode(adSquadId, accessToken, requestBody);
-        generatePythonCode(adSquadId, accessToken, requestBody);
-        generateRawJSON(requestBody);
-
-        // If we used OAuth, keep the token out of the visible input
-        if (source === 'oauth') {
-            const accessTokenInput = document.getElementById('accessToken');
-            if (accessTokenInput) {
-                accessTokenInput.value = '';
-                accessTokenInput.placeholder = 'Token captured via OAuth session';
-            }
-        }
-
-        // Show output section
-        document.getElementById('outputSection').style.display = 'block';
-    } catch (error) {
-        console.error('Error generating code:', error);
-        alert('Error generating code. Check console for details.');
-    }
-}
-
-function generateCurlCode(adSquadId, accessToken, requestBody) {
-    // Convert to Snapchat API format
-    const snapchatRequestBody = {
-        adsquad: {
-            bid_multiplier_properties: {
-                multipliers: requestBody.multipliers,
-                default_multiplier: requestBody.default_multiplier
-            }
-        }
-    };
-    
-    const curl = `curl -X PUT 'https://adsapi.snapchat.com/v1/adsquads/${adSquadId}' \\
-  -H 'Authorization: Bearer ${accessToken}' \\
-  -H 'Content-Type: application/json' \\
-  -d '${JSON.stringify(snapchatRequestBody, null, 2)}'`;
-    
-    document.getElementById('curlCode').textContent = curl;
-}
-
-function generateJavaScriptCode(adSquadId, accessToken, requestBody) {
-    // Convert to Snapchat API format
-    const snapchatRequestBody = {
-        adsquad: {
-            bid_multiplier_properties: {
-                multipliers: requestBody.multipliers,
-                default_multiplier: requestBody.default_multiplier
-            }
-        }
-    };
-    
-    const jsCode = `// Using Fetch API - Direct Snapchat API call
-const updateBidMultipliers = async () => {
-  const response = await fetch('https://adsapi.snapchat.com/v1/adsquads/${adSquadId}', {
-    method: 'PUT',
-    headers: {
-      'Authorization': 'Bearer ${accessToken}',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(${JSON.stringify(snapchatRequestBody, null, 2).split('\n').join('\n  ')})
-  });
-  
-  const result = await response.json();
-  console.log('Bid multipliers updated:', result);
-};
-
-// Call the function
-updateBidMultipliers();`;
-    
-    document.getElementById('javascriptCode').textContent = jsCode;
-}
-
-function generatePythonCode(adSquadId, accessToken, requestBody) {
-    // Convert to Snapchat API format
-    const snapchatRequestBody = {
-        adsquad: {
-            bid_multiplier_properties: {
-                multipliers: requestBody.multipliers,
-                default_multiplier: requestBody.default_multiplier
-            }
-        }
-    };
-    
-    const pythonCode = `import requests
-import json
-
-# Direct Snapchat API endpoint
-url = f"https://adsapi.snapchat.com/v1/adsquads/${adSquadId}"
-
-# Headers
-headers = {
-    "Authorization": f"Bearer ${accessToken}",
-    "Content-Type": "application/json"
-}
-
-# Request body with Snapchat API format
-data = ${JSON.stringify(snapchatRequestBody, null, 2).split('\n').join('\n    ')}
-
-# Make the request
-response = requests.put(url, headers=headers, json=data)
-
-# Check response
-if response.status_code == 200:
-    print("Bid multipliers updated successfully")
-    print(response.json())
-else:
-    print(f"Error: {response.status_code}")
-    print(response.text)`;
-    
-    document.getElementById('pythonCode').textContent = pythonCode;
-}
-
-function generateRawJSON(requestBody) {
-    // Convert to Snapchat API format
-    const snapchatRequestBody = {
-        adsquad: {
-            bid_multiplier_properties: {
-                multipliers: requestBody.multipliers,
-                default_multiplier: requestBody.default_multiplier
-            }
-        }
-    };
-    document.getElementById('rawCode').textContent = JSON.stringify(snapchatRequestBody, null, 2);
-}
-
-function showTab(tabName) {
-    // Hide all outputs
-    const outputs = ['curlOutput', 'javascriptOutput', 'pythonOutput', 'rawOutput'];
-    outputs.forEach(output => {
-        document.getElementById(output).style.display = 'none';
-    });
-    
-    // Remove active class from all tabs
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
+// Tab Management
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    
-    // Show selected output and mark tab as active
-    document.getElementById(tabName + 'Output').style.display = 'block';
     event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(`${tabName}-tab`).classList.add('active');
 }
 
-function copyCode(outputId) {
-    const codeElement = document.getElementById(outputId).querySelector('pre');
-    const textArea = document.createElement('textarea');
-    textArea.value = codeElement.textContent;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
+// Authentication Tab Functions
+function generateAuthUrl() {
+    const clientId = document.getElementById('clientId').value.trim();
+    const redirectUri = document.getElementById('redirectUri').value.trim();
     
-    // Show feedback
-    const copyBtn = document.getElementById(outputId).querySelector('.copy-btn');
-    const originalText = copyBtn.textContent;
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => {
-        copyBtn.textContent = originalText;
-    }, 2000);
-}
-
-function clearAll() {
-    // Clear all input fields
-    document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
-        if (input.id === 'defaultMultiplier') {
-            input.value = '1.0';
-        } else if (!input.id.includes('-multiplier')) {
-            input.value = '';
-        }
-    });
-    
-    // Clear multiselect selections
-    selectedItems.state = {};
-    selectedItems.dma = {};
-    
-    // Uncheck all checkboxes
-    document.querySelectorAll('.multiselect-dropdown input[type="checkbox"]').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    
-    // Reset all multiplier inputs to 1.0
-    document.querySelectorAll('.multiselect-dropdown input[type="number"]').forEach(input => {
-        input.value = '1.0';
-    });
-    
-    // Update displays
-    updateSelectedDisplay('state');
-    updateSelectedDisplay('dma');
-    
-    // Hide output section
-    document.getElementById('outputSection').style.display = 'none';
-}
-
-// Add Enter key support for generating code
-document.addEventListener('keypress', function(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        generateCode();
+    if (!clientId || !redirectUri) {
+        showMessage('Please enter both Client ID and Redirect URI', 'error');
+        return;
     }
-});
-
-// DMAs data (usStates already defined above)
-const dmas = [
-    { code: 'DMA_501', name: 'New York', state: 'NY' },
-    { code: 'DMA_803', name: 'Los Angeles', state: 'CA' },
-    { code: 'DMA_602', name: 'Chicago', state: 'IL' },
-    { code: 'DMA_504', name: 'Philadelphia', state: 'PA' },
-    { code: 'DMA_623', name: 'Dallas-Ft. Worth', state: 'TX' },
-    { code: 'DMA_807', name: 'San Francisco-Oak-San Jose', state: 'CA' },
-    { code: 'DMA_511', name: 'Washington DC (Hagerstown)', state: 'DC' },
-    { code: 'DMA_618', name: 'Houston', state: 'TX' },
-    { code: 'DMA_506', name: 'Boston (Manchester)', state: 'MA' },
-    { code: 'DMA_524', name: 'Atlanta', state: 'GA' },
-    { code: 'DMA_753', name: 'Phoenix (Prescott)', state: 'AZ' },
-    { code: 'DMA_505', name: 'Detroit', state: 'MI' },
-    { code: 'DMA_613', name: 'Minneapolis-St. Paul', state: 'MN' },
-    { code: 'DMA_528', name: 'Miami-Ft. Lauderdale', state: 'FL' },
-    { code: 'DMA_534', name: 'Orlando-Daytona Beach-Melbourne', state: 'FL' },
-    { code: 'DMA_539', name: 'Tampa-St Petersburg (Sarasota)', state: 'FL' },
-    { code: 'DMA_510', name: 'Cleveland-Akron (Canton)', state: 'OH' },
-    { code: 'DMA_819', name: 'Seattle-Tacoma', state: 'WA' },
-    { code: 'DMA_820', name: 'Portland', state: 'OR' },
-    { code: 'DMA_508', name: 'Pittsburgh', state: 'PA' },
-    { code: 'DMA_527', name: 'Charlotte', state: 'NC' },
-    { code: 'DMA_641', name: 'St. Louis', state: 'MO' },
-    { code: 'DMA_609', name: 'Sacramento-Stockton-Modesto', state: 'CA' },
-    { code: 'DMA_517', name: 'Baltimore', state: 'MD' },
-    { code: 'DMA_560', name: 'Raleigh-Durham (Fayetteville)', state: 'NC' },
-    { code: 'DMA_512', name: 'Cincinnati', state: 'OH' },
-    { code: 'DMA_635', name: 'Austin', state: 'TX' },
-    { code: 'DMA_616', name: 'Kansas City', state: 'MO' },
-    { code: 'DMA_770', name: 'Salt Lake City', state: 'UT' },
-    { code: 'DMA_853', name: 'San Diego', state: 'CA' },
-    { code: 'DMA_839', name: 'Las Vegas', state: 'NV' }
-];
-// Make dmas globally available
-window.dmas = dmas;
-
-// Initialize dropdowns when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOMContentLoaded - Initializing dropdowns');
-        initializeDropdowns();
-    });
-} else {
-    // DOM is already loaded
-    console.log('DOM already loaded - Initializing dropdowns immediately');
-    initializeDropdowns();
+    
+    const authUrl = new URL('https://accounts.snapchat.com/login/oauth2/authorize');
+    authUrl.searchParams.append('client_id', clientId);
+    authUrl.searchParams.append('redirect_uri', redirectUri);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('scope', 'snapchat-marketing-api');
+    authUrl.searchParams.append('state', Math.random().toString(36).substring(2, 15));
+    
+    document.getElementById('authUrl').textContent = authUrl.toString();
+    document.getElementById('authUrlSection').classList.remove('hidden');
 }
 
-function initializeDropdowns() {
+function saveOAuthConfig() {
+    const clientId = document.getElementById('clientId').value.trim();
+    const clientSecret = document.getElementById('clientSecret').value.trim();
+    const redirectUri = document.getElementById('redirectUri').value.trim();
+    
+    OAuthConfig.save(clientId, clientSecret, redirectUri);
+    showMessage('OAuth configuration saved locally', 'success');
+}
+
+function openAuthUrl() {
+    const authUrl = document.getElementById('authUrl').textContent;
+    window.open(authUrl, '_blank');
+}
+
+async function testToken() {
+    const { token, source } = resolveAccessToken();
+    
+    if (!token) {
+        showMessage('Please enter an access token', 'error');
+        return;
+    }
+    
     try {
-        console.log('Starting initializeDropdowns function');
+        const response = await fetch('/debug/test-snapchat-direct', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ access_token: token })
+        });
         
-        // Debug: Check if buttons exist
-        const stateButton = document.querySelector('.multiselect-toggle[data-dropdown="state-dropdown"]');
-        const dmaButton = document.querySelector('.multiselect-toggle[data-dropdown="dma-dropdown"]');
-        console.log('State button found:', !!stateButton);
-        console.log('DMA button found:', !!dmaButton);
+        const data = await response.json();
         
-        // Populate states
-        const stateOptionsContainer = document.getElementById('state-options');
-        if (!stateOptionsContainer) {
-            console.error('State options container not found');
-            return;
+        if (response.ok) {
+            updateAuthStatus(true);
+            showMessage('Successfully connected to Snapchat API!', 'success');
+        } else {
+            updateAuthStatus(false);
+            showMessage(`Connection failed: ${data.error || 'Unknown error'}`, 'error');
         }
-        
-        Object.entries(usStates).forEach(([code, name]) => {
-            const optionDiv = createOptionItem('state', code, `${name} (${code})`);
-            stateOptionsContainer.appendChild(optionDiv);
-        });
-
-        // Populate DMAs
-        const dmaOptionsContainer = document.getElementById('dma-options');
-        if (!dmaOptionsContainer) {
-            console.error('DMA options container not found');
-            return;
-        }
-        
-        dmas.forEach(dma => {
-            const optionDiv = createOptionItem('dma', dma.code, `${dma.name}, ${dma.state}`);
-            dmaOptionsContainer.appendChild(optionDiv);
-        });
-        
-        // Add event listeners for dropdown toggles
-        document.querySelectorAll('.multiselect-toggle').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const dropdownId = this.getAttribute('data-dropdown');
-                toggleDropdown(dropdownId);
-            });
-        });
-        
-        // Add event listeners for search inputs
-        document.querySelectorAll('.search-input').forEach(input => {
-            input.addEventListener('keyup', function() {
-                const type = this.getAttribute('data-type');
-                filterOptions(type);
-            });
-        });
-        
-        // Add event listeners for select all/clear all buttons
-        document.querySelectorAll('.select-all-container button').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const type = this.getAttribute('data-type');
-                const action = this.getAttribute('data-action');
-                if (action === 'selectAll') {
-                    selectAll(type);
-                } else if (action === 'deselectAll') {
-                    deselectAll(type);
-                }
-            });
-        });
-        
-        // Add event listeners for main buttons
-        const generateBtn = document.getElementById('generateCodeBtn');
-        if (generateBtn) {
-            generateBtn.addEventListener('click', generateCode);
-        }
-        
-        const clearBtn = document.getElementById('clearAllBtn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', clearAll);
-        }
-        
-        const executeBtn = document.getElementById('executeApiBtn');
-        if (executeBtn) {
-            executeBtn.addEventListener('click', executeAPICall);
-        }
-        
-        const testAuthBtn = document.getElementById('testAuthBtn');
-        if (testAuthBtn) {
-            testAuthBtn.addEventListener('click', testAuthentication);
-        }
-        
-        // Add event listeners for tabs
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const tabName = this.getAttribute('data-tab');
-                showTab(tabName);
-            });
-        });
-        
-        // Add event listeners for copy buttons
-        document.querySelectorAll('.copy-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                copyCode(targetId);
-            });
-        });
-        
-        // Initialize OAuth
-        initializeOAuth();
-        
-        console.log('Dropdowns initialized successfully');
     } catch (error) {
-        console.error('Error initializing dropdowns:', error);
+        updateAuthStatus(false);
+        showMessage(`Connection error: ${error.message}`, 'error');
     }
 }
 
-function createOptionItem(type, code, displayName) {
-    const div = document.createElement('div');
-    div.className = 'option-item';
+function updateAuthStatus(isConnected) {
+    const statusIndicator = document.getElementById('authStatus');
+    const statusText = document.getElementById('authStatusText');
+    const authInfo = document.getElementById('authInfo');
     
-    const label = document.createElement('label');
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.value = code;
-    checkbox.addEventListener('change', function() {
-        window.toggleSelection(type, code, this.checked);
-    });
-    
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(' ' + displayName));
-    
-    const multiplierInput = document.createElement('input');
-    multiplierInput.type = 'number';
-    multiplierInput.id = `${type}-${code}-multiplier`;
-    multiplierInput.min = '0.1';
-    multiplierInput.max = '1';
-    multiplierInput.step = '0.05';
-    multiplierInput.value = '1.0';
-    multiplierInput.addEventListener('change', function() {
-        window.updateMultiplier(type, code, this.value);
-    });
-    
-    div.appendChild(label);
-    div.appendChild(multiplierInput);
-    
-    return div;
-}
-
-function toggleDropdown(dropdownId) {
-    const dropdown = document.getElementById(dropdownId);
-    dropdown.classList.toggle('active');
-    
-    // Close other dropdowns
-    document.querySelectorAll('.multiselect-dropdown').forEach(dd => {
-        if (dd.id !== dropdownId) {
-            dd.classList.remove('active');
-        }
-    });
-}
-
-function toggleSelection(type, code, isChecked) {
-    const multiplierInput = document.getElementById(`${type}-${code}-multiplier`);
-    const multiplier = parseFloat(multiplierInput.value) || 1.0;
-    
-    if (isChecked) {
-        selectedItems[type][code] = multiplier;
-    } else {
-        delete selectedItems[type][code];
-    }
-    
-    updateSelectedDisplay(type);
-}
-
-function updateMultiplier(type, code, value) {
-    const checkbox = document.querySelector(`input[type="checkbox"][value="${code}"]`);
-    if (checkbox && checkbox.checked) {
-        selectedItems[type][code] = parseFloat(value) || 1.0;
-        updateSelectedDisplay(type);
-    }
-}
-
-function updateSelectedDisplay(type) {
-    const container = document.getElementById(`selected-${type}s`);
-    container.innerHTML = '';
-    
-    Object.entries(selectedItems[type]).forEach(([code, multiplier]) => {
-        const item = document.createElement('div');
-        item.className = 'selected-item';
+    if (isConnected) {
+        statusIndicator.classList.add('status-connected');
+        statusIndicator.classList.remove('status-disconnected');
+        statusText.textContent = 'Connected';
+        authInfo.classList.remove('hidden');
         
-        let displayName = code;
-        if (type === 'state') {
-            displayName = `${usStates[code]} (${code}): ${multiplier}`;
-        } else {
-            const dma = dmas.find(d => d.code === code);
-            displayName = `${dma ? dma.name : code}: ${multiplier}`;
-        }
-        
-        item.textContent = displayName;
-        const removeSpan = document.createElement('span');
-        removeSpan.className = 'remove';
-        removeSpan.textContent = '×';
-        removeSpan.addEventListener('click', function() {
-            removeSelection(type, code);
-        });
-        item.appendChild(removeSpan);
-        container.appendChild(item);
-    });
-}
-
-function removeSelection(type, code) {
-    delete selectedItems[type][code];
-    const checkbox = document.querySelector(`#${type}-options input[type="checkbox"][value="${code}"]`);
-    if (checkbox) {
-        checkbox.checked = false;
-    }
-    updateSelectedDisplay(type);
-}
-
-function filterOptions(type) {
-    const searchInput = document.querySelector(`#${type}-dropdown .search-input`);
-    const searchTerm = searchInput.value.toLowerCase();
-    const options = document.querySelectorAll(`#${type}-options .option-item`);
-    
-    options.forEach(option => {
-        const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-    });
-}
-
-function selectAll(type) {
-    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-        toggleSelection(type, checkbox.value, true);
-    });
-}
-
-function deselectAll(type) {
-    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        toggleSelection(type, checkbox.value, false);
-    });
-}
-
-// Close dropdowns when clicking outside
-document.addEventListener('click', function(event) {
-    if (!event.target.closest('.multiselect-container')) {
-        document.querySelectorAll('.multiselect-dropdown').forEach(dropdown => {
-            dropdown.classList.remove('active');
-        });
-    }
-});
-
-// Make functions available globally for onclick handlers
-window.toggleDropdown = toggleDropdown;
-window.toggleSelection = toggleSelection;
-window.updateMultiplier = updateMultiplier;
-window.removeSelection = removeSelection;
-window.filterOptions = filterOptions;
-window.selectAll = selectAll;
-window.deselectAll = deselectAll;
-// Test authentication function
-function testAuthentication() {
-    const { token: accessToken, source } = resolveAccessToken();
-    const jwtToken = TokenManager.getToken();
-    const authHeaderToken = jwtToken || accessToken;
-    const isOAuth = !!jwtToken && source === 'oauth';
-    
-    if (!authHeaderToken) {
-        alert('Authentication required before running the test.\n\nClick "Log in with Snapchat" to authorize and capture a token, or paste a valid Marketing API OAuth token manually.');
-        return;
-    }
-    
-    // Check if this looks like a Conversions API token
-    if (!isOAuth && accessToken && accessToken.match(/^[A-Z0-9]{50,}$/)) {
-        alert('❌ This appears to be a Conversions API token!\n\nConversions API tokens (from the "Conversions API Tokens" section) are for event tracking, not for the Marketing API.\n\nYou need an OAuth access token from the Marketing API instead.\n\nTo get a Marketing API token:\n1. Create a Snapchat app at business.snapchat.com\n2. Use the OAuth flow to get an access token\n3. Or use Snapchat\'s API testing tools');
-        return;
-    }
-    
-    const apiUrl = window.location.origin;
-    console.log('Testing authentication...');
-    
-    // First test without auth
-    fetch(`${apiUrl}/debug/auth`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('Debug endpoint (no auth):', data);
-        });
-    
-    // Then test with auth header
-    fetch(`${apiUrl}/debug/auth`, {
-        headers: {
-            'Authorization': `Bearer ${authHeaderToken}`
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Debug endpoint (with auth):', data);
-        alert(`Auth Header Debug:\n\nReceived: ${data.hasAuthHeader ? 'Yes' : 'No'}\nStarts with Bearer: ${data.startsWithBearer}\nToken Length: ${data.tokenLength}\nHas JWT_SECRET: ${data.hasJwtSecret}\nToken starts with: ${data.tokenStartsWith}`);
-        
-        // Now test actual auth middleware
-        return fetch(`${apiUrl}/debug/test-auth`, {
-            headers: {
-                'Authorization': `Bearer ${authHeaderToken}`
-            }
-        });
-    })
-    .then(response => {
-        console.log('Auth test response:', response);
-        if (!response.ok) {
-            throw new Error(`Auth failed: ${response.status} ${response.statusText}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Auth test success:', data);
-        alert('Authentication successful! User: ' + JSON.stringify(data.user));
-        
-        // Test Snapchat API connection
-        return fetch(`${apiUrl}/debug/test-snapchat`, {
-            headers: {
-                'Authorization': `Bearer ${authHeaderToken}`
-            }
-        });
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Snapchat API test:', data);
-        if (data.results) {
-            let message = 'Snapchat API Test Results:\n\n';
-            
-            // Test 1: Ad Accounts
-            message += `1. Ad Accounts: ${data.results.adAccounts?.success ? '✅ Success' : '❌ Failed'}\n`;
-            if (data.results.adAccounts?.success) {
-                message += `   Found ${data.results.adAccounts.count} ad accounts\n`;
-            } else {
-                message += `   Error: ${JSON.stringify(data.results.adAccounts?.error)}\n`;
-            }
-            
-            // Test 2: Ad Squad
-            message += `\n2. Ad Squad Read: ${data.results.adSquad?.success ? '✅ Success' : '❌ Failed'}\n`;
-            if (data.results.adSquad?.success && data.results.adSquad?.data) {
-                message += `   Name: ${data.results.adSquad.data.name}\n`;
-                message += `   Status: ${data.results.adSquad.data.status}\n`;
-                message += `   Has bid multipliers: ${data.results.adSquad.data.has_bid_multipliers ? 'Yes' : 'No'}\n`;
-            } else {
-                message += `   Error: ${JSON.stringify(data.results.adSquad?.error)}\n`;
-            }
-            
-            // Test 3: User Info
-            message += `\n3. User Info: ${data.results.userInfo?.success ? '✅ Success' : '❌ Failed'}\n`;
-            if (data.results.userInfo?.success && data.results.userInfo?.data) {
-                message += `   Email: ${data.results.userInfo.data.email || 'N/A'}\n`;
-            } else {
-                message += `   Error: ${JSON.stringify(data.results.userInfo?.error)}\n`;
-            }
-            
-            alert(message);
-        } else {
-            alert(`Snapchat API Test Failed!\n\nError: ${JSON.stringify(data.error)}\nStatus: ${data.status}\n\nThis indicates your token might be expired or invalid.`);
-        }
-    })
-    .catch(error => {
-        console.error('Auth test error:', error);
-        alert('Auth middleware test failed: ' + error.message);
-    });
-}
-
-window.testAuthentication = testAuthentication;
-
-// OAuth Functions
-function initializeOAuth() {
-    // Check for OAuth callback
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const expiresIn = urlParams.get('expires_in');
-    
-    if (token && expiresIn) {
-        // Save token and redirect to clean URL
-        TokenManager.saveToken(token, parseInt(expiresIn));
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showAuthSuccess();
-    }
-    
-    // Update UI based on auth status
-    updateAuthUI();
-    
-    // Set up login button
-    const loginButton = document.getElementById('oauthLoginBtn');
-    if (loginButton) {
-        loginButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            initiateOAuthFlow();
-        });
-    }
-    
-    // Set up logout link
-    const logoutLink = document.getElementById('logoutLink');
-    if (logoutLink) {
-        logoutLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            logout();
-        });
-    }
-    
-    // Check token validity periodically
-    setInterval(updateAuthUI, 30000); // Every 30 seconds
-}
-
-function updateAuthUI() {
-    const authStatus = document.getElementById('authStatus');
-    const accessTokenInput = document.getElementById('accessToken');
-    const executeBtn = document.getElementById('executeApiBtn');
-    const loginButton = document.getElementById('oauthLoginBtn');
-    
-    if (TokenManager.isAuthenticated()) {
-        if (authStatus) authStatus.style.display = 'inline';
-        if (accessTokenInput) {
-            accessTokenInput.value = '';
-            accessTokenInput.placeholder = 'Token captured via OAuth session';
-            accessTokenInput.disabled = true;
-        }
-        if (executeBtn) {
-            executeBtn.textContent = 'Execute API Call (Authenticated)';
-            executeBtn.style.background = '#4caf50';
-        }
-        if (loginButton) {
-            loginButton.textContent = 'Re-authenticate with Snapchat';
+        const expiry = TokenManager.getTokenExpiry();
+        if (expiry) {
+            document.getElementById('tokenExpiry').textContent = expiry.toLocaleString();
         }
     } else {
-        if (authStatus) authStatus.style.display = 'none';
-        if (accessTokenInput) {
-            accessTokenInput.disabled = false;
-            accessTokenInput.placeholder = 'Optional: paste an existing Marketing API token';
-        }
-        if (executeBtn) {
-            executeBtn.textContent = 'Execute API Call';
-            executeBtn.style.background = '#27ae60';
-        }
-        if (loginButton) {
-            loginButton.textContent = 'Log in with Snapchat';
-        }
-    }
-}
-
-function initiateOAuthFlow() {
-    console.log('Initiating OAuth flow...');
-    // First, check if OAuth is configured
-    fetch('/api/auth/login')
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('OAuth response:', data);
-            if (data.auth_url) {
-                console.log('Redirecting to:', data.auth_url);
-                // Redirect to Snapchat OAuth
-                window.location.href = data.auth_url;
-            } else {
-                alert('OAuth is not configured on this server. Please use Option 1 with your access token.');
-            }
-        })
-        .catch(error => {
-            console.error('OAuth error:', error);
-            alert('Unable to start OAuth flow. Error: ' + error.message);
-        });
-}
-
-function showAuthSuccess() {
-    const responseDiv = document.getElementById('apiResponse');
-    if (responseDiv) {
-        responseDiv.style.display = 'block';
-        responseDiv.style.background = '#e8f5e9';
-        responseDiv.style.border = '1px solid #4caf50';
-        responseDiv.style.color = '#2e7d32';
-        responseDiv.innerHTML = '✅ <strong>Successfully authenticated with Snapchat!</strong> You can now use the Execute API Call button.';
-        
-        // Hide after 5 seconds
-        setTimeout(() => {
-            responseDiv.style.display = 'none';
-        }, 5000);
+        statusIndicator.classList.remove('status-connected');
+        statusIndicator.classList.add('status-disconnected');
+        statusText.textContent = 'Not connected';
+        authInfo.classList.add('hidden');
     }
 }
 
 function logout() {
     TokenManager.clearToken();
-    updateAuthUI();
+    updateAuthStatus(false);
+    document.getElementById('accessToken').value = '';
+    showMessage('Logged out successfully', 'success');
+}
+
+// Campaigns Tab Functions
+async function fetchCampaigns() {
+    const adAccountId = document.getElementById('adAccountId').value.trim();
     
-    const responseDiv = document.getElementById('apiResponse');
-    if (responseDiv) {
-        responseDiv.style.display = 'block';
-        responseDiv.style.background = '#fff3cd';
-        responseDiv.style.border = '1px solid #ffc107';
-        responseDiv.style.color = '#856404';
-        responseDiv.innerHTML = '👋 <strong>Logged out successfully.</strong> You can still generate code or login again to use Execute API Call.';
+    if (!adAccountId) {
+        showMessage('Please enter an Ad Account ID', 'error');
+        return;
+    }
+    
+    const { token } = resolveAccessToken();
+    
+    if (!token) {
+        showMessage('Please authenticate first', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('fetchCampaignsBtn');
+    const loading = document.getElementById('campaignsLoading');
+    
+    btn.disabled = true;
+    loading.classList.remove('hidden');
+    
+    try {
+        // Simulated API call - replace with actual endpoint
+        const response = await fetch(`/api/campaigns?ad_account_id=${adAccountId}`, {
+            headers: {
+                'Authorization': `Bearer ${TokenManager.getToken()}`
+            }
+        });
         
-        // Hide after 3 seconds
-        setTimeout(() => {
-            responseDiv.style.display = 'none';
-        }, 3000);
+        if (!response.ok) {
+            throw new Error('Failed to fetch campaigns');
+        }
+        
+        const data = await response.json();
+        
+        if (data.campaigns && data.campaigns.length > 0) {
+            CampaignManager.setCampaigns(data.campaigns);
+            displayCampaigns();
+            document.getElementById('bulkControls').classList.remove('hidden');
+            document.getElementById('campaignMessage').classList.add('hidden');
+        } else {
+            document.getElementById('campaignsContainer').classList.add('hidden');
+            document.getElementById('campaignMessage').classList.remove('hidden');
+            document.getElementById('bulkControls').classList.add('hidden');
+        }
+    } catch (error) {
+        showMessage(`Error fetching campaigns: ${error.message}`, 'error');
+        document.getElementById('campaignsContainer').classList.add('hidden');
+        document.getElementById('bulkControls').classList.add('hidden');
+    } finally {
+        btn.disabled = false;
+        loading.classList.add('hidden');
     }
 }
 
-function executeAPICall() {
-    if (!lastGeneratedRequest) {
-        alert('Please generate API code first');
-        return;
-    }
+function displayCampaigns() {
+    const tbody = document.getElementById('campaignsTableBody');
+    tbody.innerHTML = '';
+    
+    CampaignManager.getCampaigns().forEach(campaign => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${campaign.name || 'Unnamed Campaign'}</td>
+            <td>${campaign.id}</td>
+            <td>${campaign.status || 'Active'}</td>
+            <td>${campaign.budget ? `$${campaign.budget.toLocaleString()}` : 'N/A'}</td>
+            <td>${campaign.impressions ? campaign.impressions.toLocaleString() : 'N/A'}</td>
+            <td>${campaign.currentMultiplier || '1.0'}x</td>
+            <td>
+                <input type="number" 
+                       class="multiplier-input" 
+                       min="0.1" 
+                       max="10" 
+                       step="0.1" 
+                       value="${campaign.newMultiplier || campaign.currentMultiplier || '1.0'}"
+                       onchange="updateCampaignMultiplier('${campaign.id}', this.value)">
+            </td>
+            <td>
+                <button onclick="applyCampaignMultiplier('${campaign.id}')">Apply</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    document.getElementById('campaignsContainer').classList.remove('hidden');
+}
 
-    const { adSquadId, accessToken, requestBody, tokenSource } = lastGeneratedRequest;
-    const apiUrl = window.location.origin;
-    const responseDiv = document.getElementById('apiResponse');
-    if (!responseDiv) {
-        console.error('API response container not found');
-        return;
-    }
+function updateCampaignMultiplier(campaignId, value) {
+    CampaignManager.updateCampaignMultiplier(campaignId, parseFloat(value));
+}
+
+async function applyCampaignMultiplier(campaignId) {
+    const campaign = CampaignManager.getCampaigns().find(c => c.id === campaignId);
+    if (!campaign) return;
     
-    // Check if we have an OAuth token
-    const jwtToken = TokenManager.getToken();
-    const authToken = jwtToken || accessToken;
-    const isOAuth = !!jwtToken && tokenSource === 'oauth';
+    const multiplier = campaign.newMultiplier || campaign.currentMultiplier || 1.0;
     
-    if (!authToken) {
-        alert('Authentication required.\n\nClick "Log in with Snapchat" to authorize and capture a token, or paste a valid Marketing API OAuth token manually.');
-        return;
-    }
-    
-    // Show loading state
-    responseDiv.style.display = 'block';
-    responseDiv.style.background = '#e3f2fd';
-    responseDiv.style.border = '1px solid #2196f3';
-    responseDiv.style.color = '#1565c0';
-    responseDiv.innerHTML = '⏳ Executing API call' + (isOAuth ? ' with OAuth authentication' : '') + '...';
-    
-    fetch(`${apiUrl}/api/adsquads/${adSquadId}/bid-multipliers`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-    })
-    .then(async response => {
-        const data = await response.json();
+    try {
+        // Simulated API call - replace with actual endpoint
+        const response = await fetch(`/api/campaigns/${campaignId}/multiplier`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${TokenManager.getToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ multiplier })
+        });
         
         if (response.ok) {
-            // Success
-            responseDiv.style.background = '#e8f5e9';
-            responseDiv.style.border = '1px solid #4caf50';
-            responseDiv.style.color = '#2e7d32';
-            responseDiv.innerHTML = `
-                ✅ <strong>Success!</strong> Bid multipliers updated successfully.<br><br>
-                <strong>Response:</strong><br>
-                <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
-            `;
+            showMessage(`Multiplier ${multiplier}x applied to ${campaign.name}`, 'success');
+            campaign.currentMultiplier = multiplier;
+            displayCampaigns();
         } else {
-            // Error
-            responseDiv.style.background = '#ffebee';
-            responseDiv.style.border = '1px solid #f44336';
-            responseDiv.style.color = '#c62828';
-            
-            let errorMessage = `❌ <strong>Error!</strong> Failed to update bid multipliers.<br><br>`;
-            
-            if (response.status === 401 && !isOAuth) {
-                errorMessage += `
-                    <strong>Authentication Failed</strong><br>
-                    Your access token may be invalid or expired.<br><br>
-                    <strong>Options:</strong><br>
-                    1. <a href="#" onclick="initiateOAuthFlow(); return false;" style="color: #c62828; text-decoration: underline;">Login with Snapchat</a> for automatic authentication<br>
-                    2. Get a fresh access token from Snapchat and try again<br><br>
-                `;
-            } else if (response.status === 401 && isOAuth) {
-                // OAuth token expired
-                TokenManager.clearToken();
-                updateAuthUI();
-                errorMessage += `
-                    <strong>Session Expired</strong><br>
-                    Your authentication session has expired.<br>
-                    <a href="#" onclick="initiateOAuthFlow(); return false;" style="color: #c62828; text-decoration: underline;">Login again</a><br><br>
-                `;
-            }
-            
-            errorMessage += `<strong>Status:</strong> ${response.status}<br>
-                <strong>Message:</strong> ${data.error || 'Unknown error'}<br>
-                ${data.errors ? `<strong>Validation Errors:</strong><br><pre style="background: #f5f5f5; padding: 10px; border-radius: 3px;">${JSON.stringify(data.errors, null, 2)}</pre>` : ''}
-            `;
-            
-            responseDiv.innerHTML = errorMessage;
+            throw new Error('Failed to apply multiplier');
         }
-    })
-    .catch(error => {
-        // Network error
-        responseDiv.style.background = '#ffebee';
-        responseDiv.style.border = '1px solid #f44336';
-        responseDiv.style.color = '#c62828';
-        responseDiv.innerHTML = `
-            ❌ <strong>Network Error!</strong><br><br>
-            Failed to connect to the API server.<br>
-            <strong>Error:</strong> ${error.message}
-        `;
+    } catch (error) {
+        showMessage(`Error applying multiplier: ${error.message}`, 'error');
+    }
+}
+
+function applyBulkMultiplier() {
+    const multiplier = parseFloat(document.getElementById('bulkMultiplier').value);
+    
+    if (isNaN(multiplier) || multiplier < 0.1 || multiplier > 10) {
+        showMessage('Please enter a valid multiplier between 0.1 and 10', 'error');
+        return;
+    }
+    
+    CampaignManager.applyBulkMultiplier(multiplier);
+    displayCampaigns();
+    showMessage(`Bulk multiplier ${multiplier}x applied to all campaigns`, 'success');
+}
+
+// Postman Integration Functions
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showMessage('Copied to clipboard!', 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showMessage('Copied to clipboard!', 'success');
     });
 }
 
-// Expose functions needed by inline handlers or debugging
-window.generateCode = generateCode;
-window.executeAPICall = executeAPICall;
-window.initiateOAuthFlow = initiateOAuthFlow;
+// General UI Functions
+function showMessage(message, type = 'info') {
+    const apiResponse = document.getElementById('apiResponse');
+    apiResponse.className = `alert alert-${type === 'error' ? 'danger' : type}`;
+    apiResponse.textContent = message;
+    apiResponse.style.display = 'block';
+    
+    setTimeout(() => {
+        apiResponse.style.display = 'none';
+    }, 5000);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved OAuth config
+    const config = OAuthConfig.get();
+    document.getElementById('clientId').value = config.clientId;
+    document.getElementById('clientSecret').value = config.clientSecret;
+    document.getElementById('redirectUri').value = config.redirectUri;
+    
+    // Check authentication status
+    updateAuthStatus(TokenManager.isAuthenticated());
+    
+    // Handle OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+        handleOAuthCallback(code);
+    }
+});
+
+// Handle OAuth callback
+async function handleOAuthCallback(code) {
+    const config = OAuthConfig.get();
+    
+    if (!config.clientId || !config.clientSecret) {
+        showMessage('OAuth configuration missing. Please set up credentials first.', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/exchange', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                code,
+                client_id: config.clientId,
+                client_secret: config.clientSecret,
+                redirect_uri: config.redirectUri,
+                grant_type: 'authorization_code'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            TokenManager.saveToken(data.token, data.expires_in);
+            updateAuthStatus(true);
+            showMessage('Authentication successful!', 'success');
+            
+            // Clear the URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            showMessage(`Authentication failed: ${data.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showMessage(`Authentication error: ${error.message}`, 'error');
+    }
+}

@@ -1,0 +1,341 @@
+{
+  "info": {
+    "name": "Snapchat Bid Multiplier API",
+    "description": "Collection for testing Snapchat OAuth authentication and bid multiplier API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "OAuth Authentication",
+      "item": [
+        {
+          "name": "1. Initiate OAuth Login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Returns the Snapchat authorization URL. Copy the 'auth_url' from response and open in browser to complete OAuth flow."
+          }
+        },
+        {
+          "name": "2. Generate Token (Manual Flow)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{authorization_code}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "token"]
+            },
+            "description": "After completing OAuth flow in browser, copy the 'code' parameter from the callback URL and use it here to generate tokens. This endpoint returns both the JWT token and Snapchat tokens for Postman use."
+          }
+        },
+        {
+          "name": "2a. Direct Token Exchange (Query Params)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/exchange?client_id={{client_id}}&client_secret={{client_secret}}&code={{authorization_code}}&grant_type=authorization_code&redirect_uri={{redirect_uri}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "exchange"],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}"
+                },
+                {
+                  "key": "code",
+                  "value": "{{authorization_code}}"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirect_uri}}"
+                }
+              ]
+            },
+            "description": "Exchange authorization code for tokens using query parameters (Postman-style). This matches the format shown in Snapchat's API documentation screenshots."
+          }
+        },
+        {
+          "name": "2b. Direct Token Exchange (Body Params)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{client_id}}\",\n  \"client_secret\": \"{{client_secret}}\",\n  \"code\": \"{{authorization_code}}\",\n  \"grant_type\": \"authorization_code\",\n  \"redirect_uri\": \"{{redirect_uri}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/exchange",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "exchange"]
+            },
+            "description": "Exchange authorization code for tokens using body parameters. Alternative to query parameter approach."
+          }
+        },
+        {
+          "name": "3. Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Use this to refresh your access token when it expires (after 60 minutes)"
+          }
+        },
+        {
+          "name": "4. Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Debug Endpoints",
+      "item": [
+        {
+          "name": "Check Environment Variables",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/debug/env",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "env"]
+            },
+            "description": "Verify that OAuth environment variables are set correctly"
+          }
+        },
+        {
+          "name": "Test Authentication Headers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/debug/auth",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "auth"]
+            },
+            "description": "Check what authentication headers are being sent"
+          }
+        },
+        {
+          "name": "Test Auth Middleware",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/debug/test-auth",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "test-auth"]
+            },
+            "description": "Test if authentication middleware is working"
+          }
+        },
+        {
+          "name": "Test Snapchat API Connection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/debug/test-snapchat",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "test-snapchat"]
+            },
+            "description": "Test connection to Snapchat API with current auth"
+          }
+        },
+        {
+          "name": "Test Direct Snapchat Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"access_token\": \"YOUR_SNAPCHAT_ACCESS_TOKEN\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/debug/test-snapchat-direct",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "test-snapchat-direct"]
+            },
+            "description": "Test Snapchat API with a direct access token (useful for testing without OAuth flow)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Campaign Management",
+      "item": [
+        {
+          "name": "Get All Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/campaigns",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns"]
+            },
+            "description": "Retrieve all campaigns for the authenticated account"
+          }
+        },
+        {
+          "name": "Get Ad Squads for Campaign",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/adsquads/:campaignId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "adsquads", ":campaignId"],
+              "variable": [
+                {
+                  "key": "campaignId",
+                  "value": "YOUR_CAMPAIGN_ID",
+                  "description": "Replace with actual campaign ID"
+                }
+              ]
+            },
+            "description": "Get all ad squads for a specific campaign"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bid Multipliers",
+      "item": [
+        {
+          "name": "Update Ad Squad Bid Multipliers",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bid_multipliers\": [\n    {\n      \"dma_id\": \"807\",\n      \"multiplier\": 1.5\n    },\n    {\n      \"dma_id\": \"803\",\n      \"multiplier\": 1.2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/adsquads/:adSquadId/bid-multipliers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "adsquads", ":adSquadId", "bid-multipliers"],
+              "variable": [
+                {
+                  "key": "adSquadId",
+                  "value": "YOUR_AD_SQUAD_ID",
+                  "description": "Replace with actual ad squad ID"
+                }
+              ]
+            },
+            "description": "Update bid multipliers for specific DMAs in an ad squad"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Targeting",
+      "item": [
+        {
+          "name": "Get DMA List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/targeting/dmas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "targeting", "dmas"]
+            },
+            "description": "Get list of all available DMAs (Designated Market Areas)"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "authorization_code",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

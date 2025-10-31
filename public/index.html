@@ -3,34 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snapchat Bid Multiplier Generator</title>
+    <title>Snapchat Bid Multiplier Manager</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f5f5f5;
         }
         
         .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            background: #d0d0d0;
+        }
+        
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
             background: white;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        h1 {
-            color: #2c3e50;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
+        .tab-content.active {
+            display: block;
         }
         
         h2 {
             color: #34495e;
-            margin-top: 30px;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
         }
         
         .input-group {
@@ -45,43 +109,18 @@
         }
         
         input[type="text"],
-        input[type="number"] {
+        input[type="password"],
+        input[type="number"],
+        select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 14px;
-            box-sizing: border-box;
         }
         
         input[type="number"] {
             width: 120px;
-        }
-        
-        .multiplier-section {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .multiplier-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .multiplier-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .multiplier-item label {
-            margin-bottom: 0;
-            font-weight: normal;
         }
         
         button {
@@ -92,12 +131,16 @@
             font-size: 16px;
             border-radius: 5px;
             cursor: pointer;
-            margin-right: 10px;
             transition: background 0.3s;
         }
         
-        button:hover {
+        button:hover:not(:disabled) {
             background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
         }
         
         button.secondary {
@@ -108,12 +151,53 @@
             background: #7f8c8d;
         }
         
-        .output-section {
-            margin-top: 30px;
-            display: none;
+        button.success {
+            background: #2ecc71;
         }
         
-        .code-output {
+        button.success:hover {
+            background: #27ae60;
+        }
+        
+        button.danger {
+            background: #e74c3c;
+        }
+        
+        button.danger:hover {
+            background: #c0392b;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .code-block {
             background: #1e1e1e;
             color: #d4d4d4;
             padding: 20px;
@@ -138,352 +222,442 @@
             background: #45a049;
         }
         
-        .tab-container {
-            display: flex;
-            gap: 5px;
-            margin-bottom: -1px;
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
         
-        .tab {
-            padding: 10px 20px;
-            background: #e0e0e0;
-            border: 1px solid #ccc;
-            border-bottom: none;
-            border-radius: 5px 5px 0 0;
-            cursor: pointer;
-            transition: background 0.3s;
+        .status-connected {
+            background: #2ecc71;
         }
         
-        .tab.active {
-            background: #1e1e1e;
-            color: white;
+        .status-disconnected {
+            background: #e74c3c;
         }
         
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        
-        .info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        
-        .bid-info {
-            background: #e8f5e9;
-            border: 1px solid #4caf50;
-            color: #2e7d32;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .location-group {
-            margin-bottom: 30px;
-        }
-        
-        .location-group h3 {
-            color: #34495e;
-            font-size: 18px;
-            margin-bottom: 15px;
-        }
-        
-        .multiselect-container {
-            position: relative;
-        }
-        
-        .multiselect-toggle {
+        .campaigns-table {
             width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .campaigns-table th,
+        .campaigns-table td {
+            padding: 12px;
             text-align: left;
-            padding: 10px 15px;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-            display: flex !important;
-            justify-content: space-between;
-            align-items: center;
-            color: #333;
-            font-size: 14px;
-            font-weight: normal;
-            visibility: visible !important;
-            opacity: 1 !important;
+            border-bottom: 1px solid #ddd;
         }
         
-        .multiselect-toggle:hover {
+        .campaigns-table th {
             background: #f8f9fa;
+            font-weight: 600;
         }
         
-        .multiselect-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 1000;
-            max-height: 400px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-        
-        .multiselect-dropdown.active {
-            display: block;
-        }
-        
-        .search-input {
-            width: calc(100% - 20px);
-            margin: 10px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-        
-        .select-all-container {
-            display: flex;
-            gap: 10px;
-            padding: 0 10px 10px;
-        }
-        
-        .select-all-container button {
-            flex: 1;
-            padding: 6px 12px;
-            font-size: 14px;
-        }
-        
-        .options-container {
-            max-height: 250px;
-            overflow-y: auto;
-            padding: 0 10px 10px;
-        }
-        
-        .option-item {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .option-item:hover {
+        .campaigns-table tr:hover {
             background: #f5f5f5;
         }
         
-        .option-item input[type="checkbox"] {
-            margin-right: 10px;
-        }
-        
-        .option-item label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            flex: 1;
-            margin-bottom: 0;
-        }
-        
-        .option-item input[type="number"] {
+        .multiplier-input {
             width: 80px;
-            margin-left: auto;
-            padding: 4px 8px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
+            padding: 5px;
         }
         
-        .selected-items {
-            margin-top: 10px;
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .flex-row {
             display: flex;
+            gap: 15px;
+            align-items: flex-end;
             flex-wrap: wrap;
-            gap: 8px;
         }
         
-        .selected-item {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            color: #1976d2;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
+        .flex-grow {
+            flex: 1;
+        }
+        
+        .small-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        #apiResponse {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .bulk-controls {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .button-group {
             display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .selected-item .remove {
-            cursor: pointer;
-            font-weight: bold;
-            color: #1976d2;
-        }
-        
-        .selected-item .remove:hover {
-            color: #d32f2f;
-        }
-        
-        /* Ensure button elements are visible */
-        button.multiselect-toggle {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-color: white;
-            color: #333;
-            min-height: 40px;
-        }
-        
-        /* Debug styles - ensure buttons are always visible */
-        .multiselect-toggle {
-            position: relative;
-            z-index: 1;
-        }
-        
-        /* Fallback text if button content is missing */
-        .multiselect-toggle:empty::after {
-            content: 'Click to select options';
+            gap: 10px;
+            flex-wrap: wrap;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Snapchat Bid Multiplier Generator</h1>
-        
-        <div class="info">
-            <strong>Info:</strong> This tool generates the API calls needed to update bid multipliers on Snapchat Ads. 
-            Enter your campaign details and set multipliers for different targeting dimensions.
+        <div class="header">
+            <h1>Snapchat Bid Multiplier Manager</h1>
+            <p class="subtitle">Manage your Snapchat campaign bid multipliers with ease</p>
         </div>
 
-        <div class="input-group">
-            <label for="campaignId">Campaign ID</label>
-            <input type="text" id="campaignId" placeholder="Enter Campaign ID">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('auth')">Authentication</button>
+            <button class="tab" onclick="switchTab('campaigns')">Campaigns</button>
+            <button class="tab" onclick="switchTab('postman')">Postman Integration</button>
         </div>
 
-        <div class="input-group">
-            <label for="adSquadId">Ad Set ID</label>
-            <input type="text" id="adSquadId" placeholder="Enter Ad Set ID">
-        </div>
-
-        <div class="input-group">
-            <label for="oauthLoginBtn">Snapchat OAuth Access</label>
-            <button id="oauthLoginBtn" type="button" style="margin-bottom: 10px;">Log in with Snapchat</button>
-            <small style="color: #666; display: block; margin-bottom: 10px; line-height: 1.4;">
-                You will be redirected to <code>https://accounts.snapchat.com/login/oauth2/authorize</code> to grant Marketing API access.
-                After approving, you will return here and your token will be captured automatically.
-                <span id="authStatus" style="display: none; color: #4caf50; margin-left: 8px;">
-                    ✓ Connected 
-                    <a href="#" id="logoutLink" style="color: #f44336; text-decoration: underline; margin-left: 8px;">Log out</a>
-                </span>
-            </small>
-            <input type="text" id="accessToken" placeholder="Optional: paste an existing Marketing API access token" autocomplete="off">
-            <small style="color: #666; display: block; margin-top: 5px; line-height: 1.4;">
-                Use manual entry only if Snapchat provided a token directly (Marketing API OAuth tokens only).
-            </small>
-        </div>
-
-        <div class="input-group">
-            <label for="defaultMultiplier">Default Multiplier</label>
-            <input type="number" id="defaultMultiplier" value="1.0" min="0.5" max="10" step="0.1">
-        </div>
-
-        <h2>Location Multipliers</h2>
-        <div class="multiplier-section">
-            <div class="bid-info">
-                <strong>ℹ️ Bid Multiplier Range:</strong> Minimum: 0.5 | Maximum: 10.0
-            </div>
+        <!-- Authentication Tab -->
+        <div id="auth-tab" class="tab-content active">
+            <h2>Authentication Settings</h2>
             
-            <div class="location-group">
-                <h3>US States</h3>
-                <div class="multiselect-container">
-                    <button class="multiselect-toggle" data-dropdown="state-dropdown">
-                        Select States <span class="arrow">▼</span>
-                    </button>
-                    <div id="state-dropdown" class="multiselect-dropdown">
-                        <input type="text" class="search-input" placeholder="Search states..." data-type="state">
-                        <div class="select-all-container">
-                            <button data-action="selectAll" data-type="state">Select All</button>
-                            <button data-action="deselectAll" data-type="state">Clear All</button>
-                        </div>
-                        <div id="state-options" class="options-container">
-                            <!-- States will be added by JavaScript -->
-                        </div>
+            <div class="alert alert-info">
+                <strong>Setup Instructions:</strong> Configure your Snapchat API credentials below. You can either use OAuth flow for secure authentication or directly input an access token if you already have one.
+            </div>
+
+            <div class="section">
+                <h3>OAuth Configuration</h3>
+                <div class="flex-row">
+                    <div class="input-group flex-grow">
+                        <label for="clientId">Client ID</label>
+                        <input type="text" id="clientId" placeholder="Your Snapchat Client ID">
                     </div>
-                    <div id="selected-states" class="selected-items"></div>
+                    <div class="input-group flex-grow">
+                        <label for="clientSecret">Client Secret</label>
+                        <input type="password" id="clientSecret" placeholder="Your Snapchat Client Secret">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="redirectUri">Redirect URI</label>
+                    <input type="text" id="redirectUri" placeholder="https://yourdomain.com/api/auth/callback" value="http://localhost:3000/api/auth/callback">
+                    <small class="small-text">This must match the URI configured in your Snapchat app settings</small>
+                </div>
+                <div class="button-group">
+                    <button onclick="generateAuthUrl()" id="generateAuthBtn">Generate Authorization URL</button>
+                    <button onclick="saveOAuthConfig()" class="secondary">Save Configuration</button>
                 </div>
             </div>
 
-            <div class="location-group">
-                <h3>DMAs (Designated Market Areas)</h3>
-                <div class="multiselect-container">
-                    <button class="multiselect-toggle" data-dropdown="dma-dropdown">
-                        Select DMAs <span class="arrow">▼</span>
-                    </button>
-                    <div id="dma-dropdown" class="multiselect-dropdown">
-                        <input type="text" class="search-input" placeholder="Search DMAs..." data-type="dma">
-                        <div class="select-all-container">
-                            <button data-action="selectAll" data-type="dma">Select All</button>
-                            <button data-action="deselectAll" data-type="dma">Clear All</button>
-                        </div>
-                        <div id="dma-options" class="options-container">
-                            <!-- DMAs will be added by JavaScript -->
-                        </div>
-                    </div>
-                    <div id="selected-dmas" class="selected-items"></div>
+            <div class="section hidden" id="authUrlSection">
+                <h3>Authorization URL Generated</h3>
+                <div class="alert alert-success">
+                    <strong>Next Step:</strong> Click the button below to authorize your app with Snapchat. You'll be redirected to Snapchat's login page.
+                </div>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('authUrl')">Copy</button>
+                    <pre id="authUrl"></pre>
+                </div>
+                <button onclick="openAuthUrl()" class="success">Open Snapchat Authorization</button>
+            </div>
+
+            <div class="section">
+                <h3>Direct Token Access</h3>
+                <p>If you already have a Snapchat Marketing API access token, you can enter it directly here:</p>
+                <div class="input-group">
+                    <label for="accessToken">Access Token</label>
+                    <input type="text" id="accessToken" placeholder="Paste your Snapchat Marketing API access token">
+                </div>
+                <button onclick="testToken()">Test API Connection</button>
+            </div>
+
+            <div class="section">
+                <h3>Connection Status</h3>
+                <p>
+                    <span class="status-indicator" id="authStatus"></span>
+                    <span id="authStatusText">Not connected</span>
+                </p>
+                <div id="authInfo" class="hidden">
+                    <p><strong>Token Expires:</strong> <span id="tokenExpiry">N/A</span></p>
+                    <button onclick="logout()" class="danger">Logout</button>
                 </div>
             </div>
         </div>
 
-        <div style="margin-top: 30px;">
-            <button id="generateCodeBtn">Generate API Code</button>
-            <button class="secondary" id="clearAllBtn">Clear All</button>
-            <button class="secondary" id="testAuthBtn" style="background: #9c27b0;">Test Auth</button>
+        <!-- Campaigns Tab -->
+        <div id="campaigns-tab" class="tab-content">
+            <h2>Campaign Management</h2>
+            
+            <div class="alert alert-info">
+                <strong>How to use:</strong> Enter your Ad Account ID and click "Fetch Campaigns" to load all campaigns. You can then adjust bid multipliers individually or apply bulk changes.
+            </div>
+
+            <div class="section">
+                <h3>Account Settings</h3>
+                <div class="flex-row">
+                    <div class="input-group flex-grow">
+                        <label for="adAccountId">Ad Account ID</label>
+                        <input type="text" id="adAccountId" placeholder="Your Snapchat Ad Account ID">
+                    </div>
+                    <button onclick="fetchCampaigns()" id="fetchCampaignsBtn">
+                        Fetch Campaigns
+                        <span class="loading hidden" id="campaignsLoading"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bulk-controls hidden" id="bulkControls">
+                <h3>Bulk Update</h3>
+                <div class="flex-row">
+                    <div class="input-group">
+                        <label for="bulkMultiplier">Bulk Multiplier</label>
+                        <input type="number" id="bulkMultiplier" min="0.1" max="10" step="0.1" value="1.0" class="multiplier-input">
+                    </div>
+                    <button onclick="applyBulkMultiplier()">Apply to All Campaigns</button>
+                </div>
+            </div>
+
+            <div id="campaignsContainer" class="hidden">
+                <h3>Your Campaigns</h3>
+                <table class="campaigns-table" id="campaignsTable">
+                    <thead>
+                        <tr>
+                            <th>Campaign Name</th>
+                            <th>Campaign ID</th>
+                            <th>Status</th>
+                            <th>Budget</th>
+                            <th>Impressions</th>
+                            <th>Current Multiplier</th>
+                            <th>New Multiplier</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaignsTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="campaignMessage" class="alert alert-warning hidden">
+                No campaigns found. Make sure you have the correct Ad Account ID and proper permissions.
+            </div>
         </div>
 
-        <div class="output-section" id="outputSection">
-            <h2>Generated Code</h2>
-            <div class="tab-container">
-                <div class="tab active" data-tab="curl">cURL</div>
-                <div class="tab" data-tab="javascript">JavaScript</div>
-                <div class="tab" data-tab="python">Python</div>
-                <div class="tab" data-tab="raw">Raw JSON</div>
-            </div>
-            <div class="code-output" id="curlOutput">
-                <button class="copy-btn" data-target="curlOutput">Copy</button>
-                <pre id="curlCode"></pre>
-            </div>
-            <div class="code-output" id="javascriptOutput" style="display:none;">
-                <button class="copy-btn" data-target="javascriptOutput">Copy</button>
-                <pre id="javascriptCode"></pre>
-            </div>
-            <div class="code-output" id="pythonOutput" style="display:none;">
-                <button class="copy-btn" data-target="pythonOutput">Copy</button>
-                <pre id="pythonCode"></pre>
-            </div>
-            <div class="code-output" id="rawOutput" style="display:none;">
-                <button class="copy-btn" data-target="rawOutput">Copy</button>
-                <pre id="rawCode"></pre>
-            </div>
+        <!-- Postman Integration Tab -->
+        <div id="postman-tab" class="tab-content">
+            <h2>Postman Integration</h2>
             
-            <div style="margin-top: 20px;">
-                <button id="executeApiBtn" style="background: #2196f3;">How to Execute →</button>
-                <div id="apiResponse" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;"></div>
+            <div class="alert alert-info">
+                <strong>Quick Setup:</strong> Use these templates and scripts to quickly set up Postman for testing the Snapchat API.
+            </div>
+
+            <div class="section">
+                <h3>Environment Variables Template</h3>
+                <p>Copy this template and import it as a new environment in Postman:</p>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('envTemplate')">Copy</button>
+                    <pre id="envTemplate">{
+    "name": "Snapchat Bid Multiplier API",
+    "values": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000",
+            "enabled": true
+        },
+        {
+            "key": "client_id",
+            "value": "YOUR_CLIENT_ID",
+            "enabled": true
+        },
+        {
+            "key": "client_secret",
+            "value": "YOUR_CLIENT_SECRET",
+            "enabled": true
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "refresh_token",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "authorization_code",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "redirect_uri",
+            "value": "http://localhost:3000/api/auth/callback",
+            "enabled": true
+        }
+    ]
+}</pre>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Pre-request Script for Automatic Token Refresh</h3>
+                <p>Add this script to your Postman collection to automatically refresh tokens:</p>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('preRequestScript')">Copy</button>
+                    <pre id="preRequestScript">// Check if token exists and is about to expire
+const tokenExpiry = pm.environment.get("token_expiry");
+const currentTime = Date.now();
+const refreshToken = pm.environment.get("refresh_token");
+
+if (refreshToken && tokenExpiry && (currentTime > tokenExpiry - 300000)) {
+    // Token expires in less than 5 minutes, refresh it
+    const refreshRequest = {
+        url: pm.environment.get("base_url") + "/api/auth/refresh",
+        method: 'POST',
+        header: {
+            'Content-Type': 'application/json'
+        },
+        body: {
+            mode: 'raw',
+            raw: JSON.stringify({
+                refresh_token: refreshToken
+            })
+        }
+    };
+
+    pm.sendRequest(refreshRequest, function (err, res) {
+        if (!err && res.code === 200) {
+            const response = res.json();
+            pm.environment.set("access_token", response.token);
+            pm.environment.set("token_expiry", Date.now() + (response.expires_in * 1000));
+            console.log("Token refreshed successfully");
+        } else {
+            console.error("Failed to refresh token");
+        }
+    });
+}</pre>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Sample API Requests</h3>
+                
+                <h4>1. Direct Token Exchange (Query Parameters)</h4>
+                <p>Use this format to exchange authorization code for tokens using query parameters:</p>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('directExchangeQuery')">Copy</button>
+                    <pre id="directExchangeQuery">POST {{base_url}}/api/auth/exchange?client_id={{client_id}}&client_secret={{client_secret}}&code={{authorization_code}}&grant_type=authorization_code&redirect_uri={{redirect_uri}}
+
+Headers:
+Content-Type: application/json
+
+// Response will include access_token, refresh_token, and expires_in</pre>
+                </div>
+
+                <h4>2. Direct Token Exchange (Body Parameters)</h4>
+                <p>Alternative format using body parameters:</p>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('directExchangeBody')">Copy</button>
+                    <pre id="directExchangeBody">POST {{base_url}}/api/auth/exchange
+
+Headers:
+Content-Type: application/json
+
+Body:
+{
+    "client_id": "{{client_id}}",
+    "client_secret": "{{client_secret}}",
+    "code": "{{authorization_code}}",
+    "grant_type": "authorization_code",
+    "redirect_uri": "{{redirect_uri}}"
+}</pre>
+                </div>
+
+                <h4>3. Update Bid Multipliers</h4>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('updateMultipliers')">Copy</button>
+                    <pre id="updateMultipliers">PUT {{base_url}}/api/adsquads/{{ad_squad_id}}/bid-multipliers
+
+Headers:
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+Body:
+{
+    "bid_multipliers": [
+        {
+            "targeting_type": "STATE",
+            "targeting_id": "CA",
+            "multiplier": 1.5
+        },
+        {
+            "targeting_type": "DMA",
+            "dma_id": "807",
+            "multiplier": 2.0
+        }
+    ]
+}</pre>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Testing Your Setup</h3>
+                <ol>
+                    <li>Import the environment variables template into Postman</li>
+                    <li>Update the variables with your actual credentials</li>
+                    <li>Add the pre-request script to your collection</li>
+                    <li>Test the authentication flow:
+                        <ul>
+                            <li>Get authorization URL: <code>GET {{base_url}}/api/auth/login</code></li>
+                            <li>Complete OAuth flow in browser</li>
+                            <li>Exchange code for tokens using one of the sample requests</li>
+                        </ul>
+                    </li>
+                    <li>Start making API calls with your access token</li>
+                </ol>
             </div>
         </div>
     </div>
 
+    <div id="apiResponse"></div>
+
     <script>
-        // Debug script to help identify 404 issues
+        // Debug logging
         console.log('Page loaded from:', window.location.href);
         console.log('Script will load from:', new URL('js/bid-generator.js', window.location.href).href);
     </script>
-    <script src="js/bid-generator.js" onerror="console.error('Failed to load bid-generator.js from path:', this.src)"></script>
+    <script src="js/bid-generator.js"></script>
 </body>
 </html>

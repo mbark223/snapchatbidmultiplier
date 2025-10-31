@@ -1,29 +1,19 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Keep application code in `src/` with `routes/` for HTTP wiring, `controllers/` for request handling, `services/` for business logic, and shared helpers under `utils/` plus `middleware/`.
-- Place DTOs and shared types in `types/`. Static assets belong in `public/`, while Vercel deploys through `api/index.js`.
-- Transpiled bundles land in `dist/`. Jest specs mirror the source tree under `tests/`, with shared mocks or bootstrapping logic centralized in `tests/setup.ts`.
+Keep application code in `src/`. Route definitions live in `src/routes/`, controllers in `src/controllers/`, and request-independent logic in `src/services/`. Shared helpers sit under `src/utils/`, with reusable middleware in `src/middleware/`. DTOs and shared types belong in `types/`. Static assets reside in `public/`, while Vercel deployments mount the compiled handler from `api/index.js`. Transpiled bundles are emitted to `dist/`. Jest specs mirror the source tree under `tests/`, with cross-cutting mocks initialized in `tests/setup.ts`.
 
 ## Build, Test, and Development Commands
-- `npm run dev` starts the API with `ts-node` and Nodemon for live reload.
-- `npm run build` transpiles TypeScript to `dist/`; follow with `npm start` to serve the production bundle.
-- `npm test` executes Jest; use `npm test -- --watch` for focused iteration. Run `npm run lint` and `npm run typecheck` before submitting changes.
+Use `npm run dev` for a live-reloading API via `ts-node` and Nodemon. Build production assets with `npm run build`, then validate using `npm start`. Run `npm test` (or `npm test -- --watch`) to execute the Jest suite. Lint and type-check before raising a PR using `npm run lint` and `npm run typecheck`.
 
 ## Coding Style & Naming Conventions
-- Follow `.eslintrc.json`: two-space indentation, single quotes, and required semicolons.
-- Prefer TypeScript interfaces for request/response DTOs. Match filenames to exports (e.g., `bidMultiplierService.ts`, `auth.controller.ts`).
-- Avoid `any`; if unavoidable, document the structure in `types/` and add a narrowing helper.
+Follow the enforced `.eslintrc.json`: two-space indentation, single quotes, and required semicolons. Prefer TypeScript interfaces for request and response DTOs, and align filenames with their primary export (e.g., `bidMultiplierService.ts`). Avoid `any`; if unavoidable, define structured types in `types/` and add a narrowing helper.
 
 ## Testing Guidelines
-- Specs live beside peers in `tests/`. Use `ts-jest` helpers and initialize shared mocks in `tests/setup.ts`.
-- Cover validation branches, error paths, and Snapchat API integrations. Add regression tests whenever you fix bugs.
-- Run `npm test` before pushing to keep suites green.
+Place new specs beneath `tests/`, matching the folder layout of the unit under test and naming files `*.spec.ts`. Cover validation branches, error handling paths, and Snapchat API integrations. Initialize shared setup through `tests/setup.ts`, and ensure regression cases are added whenever you fix bugs.
 
 ## Commit & Pull Request Guidelines
-- Use Conventional Commits (e.g., `fix: correct bid rounding`). Keep subjects under 72 characters and group related changes.
-- PR descriptions should state the problem, solution, and validation steps (e.g., `npm test`, `npm run lint` outputs). Link tracking issues and add screenshots for UI-affecting changes.
+Use Conventional Commits like `fix: correct bid rounding`, keeping subjects under 72 characters. PR descriptions must state the problem, outline the solution, and list validation steps (e.g., `npm test`, `npm run lint`). Link tracking issues and provide screenshots for user-facing changes.
 
-## Environment & Deployment Tips
-- Copy `.env.example` to `.env` and configure Snapchat OAuth plus local secrets. Never commit production credentials.
-- Rebuild with `npm run build` before deploying so `api/index.js` matches the latest logic. Use helper scripts like `test-direct-token.sh` to verify deployed endpoints.
+## Security & Configuration Tips
+Copy `.env.example` to `.env` for local development, populating Snapchat OAuth secrets without committing them. Rebuild with `npm run build` before deployments so `api/index.js` stays in sync. Use helper scripts such as `test-direct-token.sh` to validate endpoints in production-like environments.
