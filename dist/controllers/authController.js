@@ -127,6 +127,91 @@ class AuthController {
                 next(error);
             }
         };
+        this.generateToken = async (req, res, next) => {
+            try {
+                const { code } = req.body;
+                if (!code) {
+                    throw new errorHandler_1.APIError('Authorization code required', 400);
+                }
+                // Exchange code for tokens
+                const tokens = await this.exchangeCodeForTokens(code);
+                // Create JWT for our app
+                const signOptions = {
+                    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+                };
+                const appToken = jsonwebtoken_1.default.sign({
+                    id: 'postman_user',
+                    email: 'postman@test.com',
+                    access_token: tokens.access_token
+                }, process.env.JWT_SECRET, signOptions);
+                // Return tokens for Postman to use
+                res.json({
+                    token: appToken,
+                    access_token: tokens.access_token,
+                    refresh_token: tokens.refresh_token,
+                    expires_in: tokens.expires_in,
+                    scope: tokens.scope
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        };
+        this.exchangeToken = async (req, res, next) => {
+            try {
+                // Support both query parameters and body parameters
+                const params = { ...req.query, ...req.body };
+                const { client_id, client_secret, code, grant_type, redirect_uri } = params;
+                // Validate required parameters
+                if (!client_id || !client_secret || !code || !grant_type || !redirect_uri) {
+                    throw new errorHandler_1.APIError('Missing required parameters: client_id, client_secret, code, grant_type, and redirect_uri are all required', 400);
+                }
+                if (grant_type !== 'authorization_code') {
+                    throw new errorHandler_1.APIError('Invalid grant_type. Must be "authorization_code"', 400);
+                }
+                // Set environment variables temporarily for this request
+                const originalClientId = process.env.SNAPCHAT_CLIENT_ID;
+                const originalClientSecret = process.env.SNAPCHAT_CLIENT_SECRET;
+                const originalRedirectUri = process.env.SNAPCHAT_REDIRECT_URI;
+                try {
+                    process.env.SNAPCHAT_CLIENT_ID = client_id;
+                    process.env.SNAPCHAT_CLIENT_SECRET = client_secret;
+                    process.env.SNAPCHAT_REDIRECT_URI = redirect_uri;
+                    // Exchange code for tokens
+                    const tokens = await this.exchangeCodeForTokens(code);
+                    // Create JWT for our app
+                    const signOptions = {
+                        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+                    };
+                    const appToken = jsonwebtoken_1.default.sign({
+                        id: 'exchange_user',
+                        email: 'exchange@test.com',
+                        access_token: tokens.access_token
+                    }, process.env.JWT_SECRET, signOptions);
+                    // Return tokens in Snapchat format
+                    res.json({
+                        token: appToken,
+                        access_token: tokens.access_token,
+                        refresh_token: tokens.refresh_token,
+                        expires_in: tokens.expires_in,
+                        token_type: tokens.token_type,
+                        scope: tokens.scope
+                    });
+                }
+                finally {
+                    // Restore original environment variables
+                    if (originalClientId !== undefined)
+                        process.env.SNAPCHAT_CLIENT_ID = originalClientId;
+                    if (originalClientSecret !== undefined)
+                        process.env.SNAPCHAT_CLIENT_SECRET = originalClientSecret;
+                    if (originalRedirectUri !== undefined)
+                        process.env.SNAPCHAT_REDIRECT_URI = originalRedirectUri;
+                }
+            }
+            catch (error) {
+                next(error);
+            }
+        };
     }
     generateState() {
         return Math.random().toString(36).substring(2, 15);

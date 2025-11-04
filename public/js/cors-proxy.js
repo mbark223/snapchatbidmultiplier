@@ -222,6 +222,90 @@ class SmartCampaignManager {
 // Initialize the smart campaign manager
 const smartCampaignManager = new SmartCampaignManager();
 
+// Override updateCampaignStateMultipliers with fallback
+window.updateCampaignStateMultipliers = async function(campaignId, stateMultipliers, defaultMultiplier) {
+    try {
+        // Try backend API first
+        const response = await fetch(`/api/campaigns/${campaignId}/adsquads`, {
+            headers: {
+                'Authorization': `Bearer ${TokenManager.getToken()}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Backend API unavailable');
+        }
+
+        const { data: adsquads } = await response.json();
+        
+        if (!adsquads || adsquads.length === 0) {
+            throw new Error('No ad squads found');
+        }
+
+        // Update via backend
+        const multiplierConfig = {
+            us_state: stateMultipliers
+        };
+
+        const updateResponse = await fetch(`/api/campaigns/${campaignId}/bid-multipliers`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${TokenManager.getToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                adsquad_ids: adsquads.map(as => as.id),
+                multipliers: multiplierConfig,
+                default_multiplier: defaultMultiplier
+            })
+        });
+
+        if (!updateResponse.ok) {
+            throw new Error('Failed to update via backend');
+        }
+
+        return true;
+    } catch (error) {
+        console.warn('Backend update failed, generating curl commands:', error);
+        
+        // Generate curl commands as fallback
+        const accessToken = TokenManager.getAccessToken();
+        if (!accessToken) {
+            throw new Error('No access token available');
+        }
+
+        // Generate the bid multiplier map
+        const bidMultiplierMap = {};
+        Object.entries(stateMultipliers).forEach(([state, multiplier]) => {
+            bidMultiplierMap[`US_STATE:${state}`] = multiplier;
+        });
+
+        const curlCommand = `
+# State Multipliers for Campaign ${campaignId}
+# First, fetch ad squads for the campaign:
+curl -X GET "https://adsapi.snapchat.com/v1/campaigns/${campaignId}/adsquads" \\
+  -H "Authorization: Bearer ${accessToken}"
+
+# Then update each ad squad with state multipliers:
+# Replace ADSQUAD_ID with actual ad squad IDs from above
+curl -X PUT "https://adsapi.snapchat.com/v1/adsquads/ADSQUAD_ID" \\
+  -H "Authorization: Bearer ${accessToken}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "adsquad": {
+      "bid_multiplier_properties": {
+        "variables": ["US_STATE"],
+        "bid_multiplier_map": ${JSON.stringify(bidMultiplierMap, null, 2)},
+        "default": ${defaultMultiplier}
+      }
+    }
+  }'`;
+
+        smartCampaignManager.showCurlCommands(curlCommand);
+        return true;
+    }
+};
+
 // Override fetchCampaigns with smart fallback
 window.fetchCampaigns = async function() {
     const adAccountId = document.getElementById('adAccountId').value.trim();

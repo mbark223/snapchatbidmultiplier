@@ -336,6 +336,30 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+        
+        .state-indicator {
+            background: #2196f3;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+            display: inline-block;
+        }
+        
+        button.secondary {
+            background: #9e9e9e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button.secondary:hover {
+            background: #757575;
+        }
     </style>
 </head>
 <body>
@@ -447,6 +471,7 @@
                         <input type="number" id="bulkMultiplier" min="0.1" max="10" step="0.1" value="1.0" class="multiplier-input">
                     </div>
                     <button onclick="applyBulkMultiplier()">Apply to All Campaigns</button>
+                    <button onclick="showBulkStateMultipliers()" class="secondary">Bulk State Multipliers</button>
                 </div>
             </div>
 
@@ -659,6 +684,7 @@ Body:
         console.log('Script will load from:', new URL('js/bid-generator.js', window.location.href).href);
     </script>
     <script src="js/bid-generator.js"></script>
+    <script src="js/state-multipliers.js"></script>
     <script src="js/snapchat-direct.js"></script>
     <script src="js/cors-proxy.js"></script>
 </body>

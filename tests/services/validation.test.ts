@@ -93,7 +93,7 @@ describe('ValidationService', () => {
       const map = ValidationService.convertToBidMultiplierMap(config);
 
       expect(map).toEqual({
-        'CA': 0.95,
+        'US_STATE:CA': 0.95,
         'DMA_501': 0.9
       });
     });

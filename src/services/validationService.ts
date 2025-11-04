@@ -99,12 +99,14 @@ export class ValidationService {
 
     if (config.us_state) {
       Object.entries(config.us_state).forEach(([state, multiplier]) => {
-        map[state] = multiplier;
+        // Snapchat API requires US_STATE: prefix for state targeting
+        map[`US_STATE:${state}`] = multiplier;
       });
     }
 
     if (config.dma) {
       Object.entries(config.dma).forEach(([dma, multiplier]) => {
+        // DMA codes are already in the correct format (DMA_XXX)
         map[dma] = multiplier;
       });
     }

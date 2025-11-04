@@ -313,13 +313,17 @@ function displayCampaigns() {
     
     CampaignManager.getCampaigns().forEach(campaign => {
         const row = document.createElement('tr');
+        const stateCount = campaign.stateMultipliers ? Object.keys(campaign.stateMultipliers).length : 0;
+        const stateIndicator = campaign.hasStateMultipliers ? 
+            `<span class="state-indicator" title="${stateCount} states configured">📍 ${stateCount}</span>` : '';
+        
         row.innerHTML = `
             <td>${campaign.name || 'Unnamed Campaign'}</td>
             <td>${campaign.id}</td>
             <td>${campaign.status || 'Active'}</td>
             <td>${campaign.budget ? `$${campaign.budget.toLocaleString()}` : 'N/A'}</td>
             <td>${campaign.impressions ? campaign.impressions.toLocaleString() : 'N/A'}</td>
-            <td>${campaign.currentMultiplier || '1.0'}x</td>
+            <td>${campaign.currentMultiplier || '1.0'}x ${stateIndicator}</td>
             <td>
                 <input type="number" 
                        class="multiplier-input" 
@@ -331,6 +335,7 @@ function displayCampaigns() {
             </td>
             <td>
                 <button onclick="applyCampaignMultiplier('${campaign.id}')">Apply</button>
+                <button onclick="showStateMultipliers('${campaign.id}')" class="secondary" title="Configure state-specific multipliers">States</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -475,4 +480,169 @@ async function handleOAuthCallback(code) {
     } catch (error) {
         showMessage(`Authentication error: ${error.message}`, 'error');
     }
+}
+
+// State Multiplier Functions
+function showStateMultipliers(campaignId) {
+    const campaign = CampaignManager.getCampaigns().find(c => c.id === campaignId);
+    if (!campaign) {
+        showMessage('Campaign not found', 'error');
+        return;
+    }
+    
+    StateMultiplierManager.showModal(campaignId, campaign.stateMultipliers || {});
+}
+
+async function updateCampaignStateMultipliers(campaignId, stateMultipliers, defaultMultiplier) {
+    try {
+        // First, get all ad squads for the campaign
+        const response = await fetch(`/api/campaigns/${campaignId}/adsquads`, {
+            headers: {
+                'Authorization': `Bearer ${TokenManager.getToken()}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch ad squads');
+        }
+
+        const { data: adsquads } = await response.json();
+        
+        if (!adsquads || adsquads.length === 0) {
+            throw new Error('No ad squads found for this campaign');
+        }
+
+        // Prepare the multiplier configuration
+        const multiplierConfig = {
+            us_state: stateMultipliers
+        };
+
+        // Update bid multipliers for all ad squads
+        const updateResponse = await fetch(`/api/campaigns/${campaignId}/bid-multipliers`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${TokenManager.getToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                adsquad_ids: adsquads.map(as => as.id),
+                multipliers: multiplierConfig,
+                default_multiplier: defaultMultiplier
+            })
+        });
+
+        if (!updateResponse.ok) {
+            const error = await updateResponse.json();
+            throw new Error(error.message || 'Failed to update state multipliers');
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error updating state multipliers:', error);
+        throw error;
+    }
+}
+
+// Bulk State Multipliers
+function showBulkStateMultipliers() {
+    // Create a modal for bulk state multipliers
+    const modal = document.createElement('div');
+    modal.id = 'bulkStateModal';
+    modal.className = 'modal';
+    modal.style.cssText = `
+        display: block;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    `;
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 60%;
+            max-width: 600px;
+        ">
+            <h2>Apply State Multipliers to All Campaigns</h2>
+            <p>Configure state multipliers that will be applied to all campaigns in your account.</p>
+            
+            <div style="margin: 20px 0;">
+                <label>
+                    <input type="checkbox" id="selectAllCampaigns" checked> 
+                    Apply to all campaigns (${CampaignManager.getCampaigns().length} total)
+                </label>
+            </div>
+            
+            <div class="button-group">
+                <button onclick="configureBulkStates()" class="success">Configure States</button>
+                <button onclick="closeBulkStateModal()" class="secondary">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeBulkStateModal() {
+    const modal = document.getElementById('bulkStateModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function configureBulkStates() {
+    closeBulkStateModal();
+    
+    // Show state configuration modal
+    StateMultiplierManager.showModal('bulk', {});
+    
+    // Override the save function for bulk operation
+    const originalSave = StateMultiplierManager.saveStateMultipliers;
+    StateMultiplierManager.saveStateMultipliers = async function() {
+        const stateMultipliers = this.getCurrentMultipliers();
+        const defaultMultiplier = parseFloat(document.getElementById('defaultStateMultiplier').value);
+        
+        if (Object.keys(stateMultipliers).length === 0) {
+            showMessage('Please select at least one state', 'error');
+            return;
+        }
+        
+        // Apply to all campaigns
+        const campaigns = CampaignManager.getCampaigns();
+        let successCount = 0;
+        let errorCount = 0;
+        
+        showMessage(`Applying state multipliers to ${campaigns.length} campaigns...`, 'info');
+        
+        for (const campaign of campaigns) {
+            try {
+                await updateCampaignStateMultipliers(campaign.id, stateMultipliers, defaultMultiplier);
+                campaign.hasStateMultipliers = true;
+                campaign.stateMultipliers = stateMultipliers;
+                campaign.defaultStateMultiplier = defaultMultiplier;
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to update campaign ${campaign.id}:`, error);
+                errorCount++;
+            }
+        }
+        
+        // Restore original save function
+        StateMultiplierManager.saveStateMultipliers = originalSave;
+        
+        if (errorCount > 0) {
+            showMessage(`Updated ${successCount} campaigns, ${errorCount} failed`, 'warning');
+        } else {
+            showMessage(`Successfully updated all ${successCount} campaigns`, 'success');
+        }
+        
+        StateMultiplierManager.closeModal();
+        displayCampaigns();
+    };
 }
