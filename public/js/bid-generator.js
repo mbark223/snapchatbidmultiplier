@@ -311,7 +311,10 @@ function displayCampaigns() {
     const tbody = document.getElementById('campaignsTableBody');
     tbody.innerHTML = '';
     
-    CampaignManager.getCampaigns().forEach(campaign => {
+    const campaigns = CampaignManager.getCampaigns();
+    console.log('Displaying campaigns:', campaigns);
+    
+    campaigns.forEach(campaign => {
         const row = document.createElement('tr');
         const stateCount = campaign.stateMultipliers ? Object.keys(campaign.stateMultipliers).length : 0;
         const stateIndicator = campaign.hasStateMultipliers ? 
@@ -333,7 +336,7 @@ function displayCampaigns() {
                        value="${campaign.newMultiplier || campaign.currentMultiplier || '1.0'}"
                        onchange="updateCampaignMultiplier('${campaign.id}', this.value)">
             </td>
-            <td>
+            <td class="action-buttons">
                 <button onclick="applyCampaignMultiplier('${campaign.id}')">Apply</button>
                 <button onclick="showStateMultipliers('${campaign.id}')" class="secondary" title="Configure state-specific multipliers">States</button>
             </td>
@@ -355,25 +358,33 @@ async function applyCampaignMultiplier(campaignId) {
     const multiplier = campaign.newMultiplier || campaign.currentMultiplier || 1.0;
     
     try {
-        // Simulated API call - replace with actual endpoint
-        const response = await fetch(`/api/campaigns/${campaignId}/multiplier`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${TokenManager.getToken()}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ multiplier })
-        });
+        // For now, just update the local state since we need ad squad IDs for the actual API
+        campaign.currentMultiplier = multiplier;
+        displayCampaigns();
         
-        if (response.ok) {
-            showMessage(`Multiplier ${multiplier}x applied to ${campaign.name}`, 'success');
-            campaign.currentMultiplier = multiplier;
-            displayCampaigns();
+        // Show instructions for manual update
+        const accessToken = TokenManager.getAccessToken();
+        if (accessToken) {
+            const curlCommand = `
+# To apply multiplier ${multiplier}x to campaign ${campaignId}:
+# First get ad squads:
+curl -X GET "https://adsapi.snapchat.com/v1/campaigns/${campaignId}/adsquads" \\
+  -H "Authorization: Bearer ${accessToken}"
+
+# Then update each ad squad with the multiplier
+# Replace ADSQUAD_ID with actual IDs from above
+curl -X PUT "https://adsapi.snapchat.com/v1/adsquads/ADSQUAD_ID" \\
+  -H "Authorization: Bearer ${accessToken}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"adsquad": {"bid_multiplier": ${multiplier}}}'`;
+            
+            console.log('Manual update instructions:', curlCommand);
+            showMessage(`Multiplier ${multiplier}x saved locally. See console for API commands.`, 'info');
         } else {
-            throw new Error('Failed to apply multiplier');
+            showMessage(`Multiplier ${multiplier}x saved locally. Login to apply to Snapchat.`, 'warning');
         }
     } catch (error) {
-        showMessage(`Error applying multiplier: ${error.message}`, 'error');
+        showMessage(`Error: ${error.message}`, 'error');
     }
 }
 
@@ -490,8 +501,17 @@ function showStateMultipliers(campaignId) {
         return;
     }
     
+    // Check if StateMultiplierManager is loaded
+    if (typeof StateMultiplierManager === 'undefined') {
+        showMessage('State multiplier module not loaded. Please refresh the page.', 'error');
+        return;
+    }
+    
     StateMultiplierManager.showModal(campaignId, campaign.stateMultipliers || {});
 }
+
+// Make function globally accessible
+window.showStateMultipliers = showStateMultipliers;
 
 async function updateCampaignStateMultipliers(campaignId, stateMultipliers, defaultMultiplier) {
     try {
