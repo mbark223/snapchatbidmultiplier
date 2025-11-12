@@ -58,9 +58,9 @@ export class CampaignController {
       const snapchatAPI = new SnapchatAPIService(req.user!.access_token);
       const adsquads = await snapchatAPI.getAdSquads(id);
 
+      // Return in the format expected by frontend
       res.json({
-        data: adsquads,
-        count: adsquads.length
+        adsquads: adsquads.map(adsquad => ({ adsquad }))
       });
     } catch (error) {
       next(error);
@@ -111,6 +111,7 @@ export class CampaignController {
 
       res.json({
         data: updatedAdSquads,
+        updated: updatedAdSquads.length,
         message: `Successfully updated ${updatedAdSquads.length} ad squads`
       });
     } catch (error) {

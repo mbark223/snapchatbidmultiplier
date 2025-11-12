@@ -358,37 +358,66 @@ async function applyCampaignMultiplier(campaignId) {
     const multiplier = campaign.newMultiplier || campaign.currentMultiplier || 1.0;
     
     try {
-        // For now, just update the local state since we need ad squad IDs for the actual API
+        const token = TokenManager.getToken();
+        if (!token) {
+            showMessage('Please login to apply multipliers', 'warning');
+            return;
+        }
+        
+        showMessage('Applying multiplier...', 'info');
+        
+        // First, get all ad squads for this campaign
+        const adSquadsResponse = await fetch(`/api/campaigns/${campaignId}/adsquads`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!adSquadsResponse.ok) {
+            throw new Error(`Failed to fetch ad squads: ${adSquadsResponse.statusText}`);
+        }
+        
+        const adSquadsData = await adSquadsResponse.json();
+        const adSquadIds = adSquadsData.adsquads ? adSquadsData.adsquads.map(as => as.adsquad.id) : [];
+        
+        if (adSquadIds.length === 0) {
+            showMessage('No ad squads found for this campaign', 'warning');
+            return;
+        }
+        
+        // Apply the multiplier to all ad squads
+        const response = await fetch(`/api/campaigns/${campaignId}/bid-multipliers`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                adsquad_ids: adSquadIds,
+                multipliers: {}, // No state-specific multipliers for now
+                default_multiplier: multiplier
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update multipliers');
+        }
+        
+        const result = await response.json();
+        
+        // Update local state
         campaign.currentMultiplier = multiplier;
         displayCampaigns();
         
-        // Show instructions for manual update
-        const accessToken = TokenManager.getAccessToken();
-        if (accessToken) {
-            const curlCommand = `
-# To apply multiplier ${multiplier}x to campaign ${campaignId}:
-# First get ad squads:
-curl -X GET "https://adsapi.snapchat.com/v1/campaigns/${campaignId}/adsquads" \\
-  -H "Authorization: Bearer ${accessToken}"
-
-# Then update each ad squad with the multiplier
-# Replace ADSQUAD_ID with actual IDs from above
-curl -X PUT "https://adsapi.snapchat.com/v1/adsquads/ADSQUAD_ID" \\
-  -H "Authorization: Bearer ${accessToken}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"adsquad": {"bid_multiplier": ${multiplier}}}'`;
-            
-            console.log('Manual update instructions:', curlCommand);
-            showMessage(`Multiplier ${multiplier}x saved locally. See console for API commands.`, 'info');
-        } else {
-            showMessage(`Multiplier ${multiplier}x saved locally. Login to apply to Snapchat.`, 'warning');
-        }
+        showMessage(`Successfully applied ${multiplier}x multiplier to ${result.updated || adSquadIds.length} ad squad(s)`, 'success');
     } catch (error) {
+        console.error('Error applying multiplier:', error);
         showMessage(`Error: ${error.message}`, 'error');
     }
 }
 
-function applyBulkMultiplier() {
+async function applyBulkMultiplier() {
     const multiplier = parseFloat(document.getElementById('bulkMultiplier').value);
     
     if (isNaN(multiplier) || multiplier < 0.1 || multiplier > 10) {
@@ -396,9 +425,47 @@ function applyBulkMultiplier() {
         return;
     }
     
-    CampaignManager.applyBulkMultiplier(multiplier);
+    const token = TokenManager.getToken();
+    if (!token) {
+        showMessage('Please login to apply multipliers', 'warning');
+        return;
+    }
+    
+    const campaigns = CampaignManager.getCampaigns();
+    if (campaigns.length === 0) {
+        showMessage('No campaigns to update', 'info');
+        return;
+    }
+    
+    showMessage(`Applying ${multiplier}x to all campaigns...`, 'info');
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Apply to each campaign
+    for (const campaign of campaigns) {
+        try {
+            // Update the new multiplier value
+            campaign.newMultiplier = multiplier;
+            
+            // Apply the multiplier
+            await applyCampaignMultiplier(campaign.id);
+            successCount++;
+        } catch (error) {
+            console.error(`Error updating campaign ${campaign.id}:`, error);
+            errorCount++;
+        }
+    }
+    
+    if (successCount > 0 && errorCount === 0) {
+        showMessage(`Successfully applied ${multiplier}x to all ${successCount} campaigns`, 'success');
+    } else if (successCount > 0) {
+        showMessage(`Applied ${multiplier}x to ${successCount} campaigns, ${errorCount} failed`, 'warning');
+    } else {
+        showMessage(`Failed to apply multipliers to campaigns`, 'error');
+    }
+    
     displayCampaigns();
-    showMessage(`Bulk multiplier ${multiplier}x applied to all campaigns`, 'success');
 }
 
 // Postman Integration Functions
