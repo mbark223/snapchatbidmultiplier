@@ -561,7 +561,7 @@ async function handleOAuthCallback(code) {
 }
 
 // State Multiplier Functions
-function showStateMultipliers(campaignId) {
+async function showStateMultipliers(campaignId) {
     const campaign = CampaignManager.getCampaigns().find(c => c.id === campaignId);
     if (!campaign) {
         showMessage('Campaign not found', 'error');
@@ -574,11 +574,114 @@ function showStateMultipliers(campaignId) {
         return;
     }
     
-    StateMultiplierManager.showModal(campaignId, campaign.stateMultipliers || {});
+    const token = TokenManager.getToken();
+    if (!token) {
+        showMessage('Please authenticate first', 'error');
+        return;
+    }
+
+    try {
+        const { stateMultipliers, defaultMultiplier } = await fetchCampaignStateMultipliers(campaignId, token);
+        campaign.stateMultipliers = stateMultipliers;
+        campaign.defaultStateMultiplier = defaultMultiplier;
+        campaign.hasStateMultipliers = Object.keys(stateMultipliers).length > 0;
+
+        StateMultiplierManager.showModal(campaignId, stateMultipliers, defaultMultiplier);
+        displayCampaigns();
+    } catch (error) {
+        console.error('Error loading state multipliers:', error);
+        showMessage(`Unable to load current state multipliers: ${error.message}`, 'error');
+    }
 }
 
 // Make function globally accessible
 window.showStateMultipliers = showStateMultipliers;
+
+async function fetchCampaignStateMultipliers(campaignId, token) {
+    const response = await fetch(`/api/campaigns/${campaignId}/adsquads`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    let payload = null;
+    try {
+        payload = await response.json();
+    } catch (error) {
+        console.warn('Failed to parse ad squad response', error);
+    }
+
+    if (!response.ok) {
+        const message = payload?.error || payload?.message || 'Failed to load ad squads';
+        throw new Error(message);
+    }
+
+    const adsquads = normalizeAdSquadsFromPayload(payload);
+    return extractStateMultipliersFromAdSquads(adsquads);
+}
+
+function normalizeAdSquadsFromPayload(payload) {
+    if (!payload) {
+        return [];
+    }
+
+    if (Array.isArray(payload.data)) {
+        return payload.data;
+    }
+
+    if (Array.isArray(payload.adsquads)) {
+        return payload.adsquads
+            .map(entry => entry?.adsquad || entry)
+            .filter(Boolean);
+    }
+
+    return [];
+}
+
+function extractStateMultipliersFromAdSquads(adsquads) {
+    const stateMultipliers = {};
+    let defaultMultiplier = 1.0;
+
+    if (!Array.isArray(adsquads)) {
+        return { stateMultipliers, defaultMultiplier };
+    }
+
+    for (const adsquad of adsquads) {
+        const props = adsquad?.bid_multiplier_properties;
+        if (!props || !props.bid_multiplier_map) {
+            continue;
+        }
+
+        const includesStates = Array.isArray(props.variables) && props.variables.includes('US_STATE');
+        if (!includesStates) {
+            continue;
+        }
+
+        Object.entries(props.bid_multiplier_map).forEach(([key, value]) => {
+            if (!key.startsWith('US_STATE:')) {
+                return;
+            }
+
+            const parts = key.split(':');
+            const stateCode = parts.length > 1 ? parts[1] : null;
+            const numericValue = typeof value === 'number' ? value : parseFloat(value);
+
+            if (stateCode && !isNaN(numericValue)) {
+                stateMultipliers[stateCode] = numericValue;
+            }
+        });
+
+        if (typeof props.default === 'number' && !isNaN(props.default)) {
+            defaultMultiplier = props.default;
+        }
+
+        if (Object.keys(stateMultipliers).length > 0) {
+            break;
+        }
+    }
+
+    return { stateMultipliers, defaultMultiplier };
+}
 
 async function updateCampaignStateMultipliers(campaignId, stateMultipliers, defaultMultiplier) {
     try {

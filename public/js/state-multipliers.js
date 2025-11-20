@@ -87,11 +87,26 @@ const StateMultiplierManager = {
     // Current state multipliers for active campaign
     currentMultipliers: {},
     activeCampaignId: null,
+    currentDefaultMultiplier: 1.0,
 
     // Initialize state multipliers for a campaign
-    initializeForCampaign(campaignId, existingMultipliers = {}) {
+    initializeForCampaign(campaignId, existingMultipliers = {}, defaultMultiplier = 1.0) {
         this.activeCampaignId = campaignId;
         this.currentMultipliers = { ...existingMultipliers };
+        this.currentDefaultMultiplier = (
+            typeof defaultMultiplier === 'number' && !isNaN(defaultMultiplier)
+        ) ? defaultMultiplier : 1.0;
+    },
+
+    setDefaultMultiplier(value = 1.0) {
+        this.currentDefaultMultiplier = (
+            typeof value === 'number' && !isNaN(value)
+        ) ? value : 1.0;
+
+        const input = document.getElementById('defaultStateMultiplier');
+        if (input) {
+            input.value = this.currentDefaultMultiplier.toString();
+        }
     },
 
     // Set multiplier for a state
@@ -322,8 +337,8 @@ const StateMultiplierManager = {
     },
 
     // Show the modal
-    showModal(campaignId, existingMultipliers = {}) {
-        this.initializeForCampaign(campaignId, existingMultipliers);
+    showModal(campaignId, existingMultipliers = {}, defaultMultiplier = 1.0) {
+        this.initializeForCampaign(campaignId, existingMultipliers, defaultMultiplier);
         
         let modal = document.getElementById('stateMultiplierModal');
         if (!modal) {
@@ -332,6 +347,7 @@ const StateMultiplierManager = {
         }
 
         this.populateStatesGrid();
+        this.setDefaultMultiplier(this.currentDefaultMultiplier);
         modal.style.display = 'block';
     },
 
