@@ -121,24 +121,59 @@ export class SnapchatAPIService {
     throw new APIError(`Network error: ${error.message}`, 500);
   };
 
+  private unwrapCollection<T>(items: unknown, key: string): T[] {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    return (items as any[])
+      .map((item) => {
+        if (item && typeof item === 'object' && key in item) {
+          return item[key];
+        }
+        return item;
+      })
+      .filter((item): item is T => Boolean(item));
+  }
+
+  private unwrapEntity<T>(payload: any, key: string): T {
+    if (payload?.[key]) {
+      return payload[key];
+    }
+
+    const collectionKey = `${key}s`;
+    if (Array.isArray(payload?.[collectionKey])) {
+      const match = payload[collectionKey].find((item: any) => item?.[key]);
+      if (match?.[key]) {
+        return match[key];
+      }
+    }
+
+    if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+      return payload as T;
+    }
+
+    throw new APIError(`${key} not found in Snapchat response`, 502);
+  }
+
   async getCampaigns(adAccountId: string): Promise<Campaign[]> {
     const response = await this.client.get(`/adaccounts/${adAccountId}/campaigns`);
-    return response.data.campaigns;
+    return this.unwrapCollection<Campaign>(response.data?.campaigns, 'campaign');
   }
 
   async getCampaign(campaignId: string): Promise<Campaign> {
     const response = await this.client.get(`/campaigns/${campaignId}`);
-    return response.data.campaign;
+    return this.unwrapEntity<Campaign>(response.data, 'campaign');
   }
 
   async getAdSquads(campaignId: string): Promise<AdSquad[]> {
     const response = await this.client.get(`/campaigns/${campaignId}/adsquads`);
-    return response.data.adsquads;
+    return this.unwrapCollection<AdSquad>(response.data?.adsquads, 'adsquad');
   }
 
   async getAdSquad(adSquadId: string): Promise<AdSquad> {
     const response = await this.client.get(`/adsquads/${adSquadId}`);
-    return response.data.adsquad;
+    return this.unwrapEntity<AdSquad>(response.data, 'adsquad');
   }
 
   async updateAdSquadBidMultipliers(
@@ -150,7 +185,7 @@ export class SnapchatAPIService {
         bid_multiplier_properties: bidMultiplierProperties
       }
     });
-    return response.data.adsquad;
+    return this.unwrapEntity<AdSquad>(response.data, 'adsquad');
   }
 
   async batchUpdateAdSquads(updates: BidMultiplierRequest[]): Promise<AdSquad[]> {
@@ -160,7 +195,7 @@ export class SnapchatAPIService {
     }));
 
     const response = await this.client.put('/adsquads/batch', { adsquads });
-    return response.data.adsquads;
+    return this.unwrapCollection<AdSquad>(response.data?.adsquads, 'adsquad');
   }
 
   async testConnection(): Promise<any> {
